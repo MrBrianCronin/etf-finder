@@ -298,6 +298,34 @@ function PerfDropdown({ label, value, onChange }) {
 }
 
 function ChipSelect({ options, selected, onToggle, disabledOptions, multi = true }) {
+
+function SingleChipSelect({ options, value, onChange, disabledOptions }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+      {options.map(({ key, label }) => {
+        const active = value === key;
+        const disabled = disabledOptions && !disabledOptions[key] && !active;
+        return (
+          <button key={key} onClick={() => {
+            if (disabled) return;
+            onChange(active ? "any" : key);
+          }}
+            style={{
+              padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 500,
+              border: active ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
+              background: active ? "var(--accent-light)" : disabled ? "var(--bg)" : "var(--surface)",
+              color: active ? "var(--accent)" : disabled ? "var(--border-strong)" : "var(--text-muted)",
+              cursor: disabled ? "default" : "pointer", transition: "all 0.15s ease",
+              fontFamily: "'DM Sans', sans-serif",
+              opacity: disabled ? 0.45 : 1,
+            }}>
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
       {options.map(opt => {
@@ -896,65 +924,50 @@ export default function ETFFinderApp() {
 
               {/* Expense Ratio */}
               <FilterSection title="Expense Ratio" defaultOpen={false}>
-                <select value={expenseFilter} onChange={e => { setExpenseFilter(e.target.value); setPage(0); }}
-                  style={{
-                    width: "100%", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
-                    border: expenseFilter !== "any" ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
-                    background: expenseFilter !== "any" ? "var(--accent-light)" : "var(--surface)",
-                    color: expenseFilter !== "any" ? "var(--accent)" : "var(--text-secondary)",
-                    cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none",
-                    appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238792A8' d='M3 5l3 3 3-3'/%3E%3C/svg%3E\")",
-                    backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
-                  }}>
-                  <option value="any">Any expense ratio</option>
-                  <option value="u010" disabled={!facets.expense.u010}>Under 0.10% (ultra-low){!facets.expense.u010 ? " — no matches" : ""}</option>
-                  <option value="010_025" disabled={!facets.expense["010_025"]}>0.10% – 0.25%{!facets.expense["010_025"] ? " — no matches" : ""}</option>
-                  <option value="025_050" disabled={!facets.expense["025_050"]}>0.25% – 0.50%{!facets.expense["025_050"] ? " — no matches" : ""}</option>
-                  <option value="050_100" disabled={!facets.expense["050_100"]}>0.50% – 1.00%{!facets.expense["050_100"] ? " — no matches" : ""}</option>
-                  <option value="100p" disabled={!facets.expense["100p"]}>1.00%+ (high){!facets.expense["100p"] ? " — no matches" : ""}</option>
-                </select>
+                <SingleChipSelect
+                  value={expenseFilter}
+                  onChange={v => { setExpenseFilter(v); setPage(0); }}
+                  disabledOptions={facets.expense}
+                  options={[
+                    { key: "u010", label: "Under 0.10%" },
+                    { key: "010_025", label: "0.10–0.25%" },
+                    { key: "025_050", label: "0.25–0.50%" },
+                    { key: "050_100", label: "0.50–1.00%" },
+                    { key: "100p", label: "1.00%+" },
+                  ]}
+                />
               </FilterSection>
 
               {/* AUM */}
               <FilterSection title="Assets Under Management" defaultOpen={false}>
-                <select value={aumFilter} onChange={e => { setAumFilter(e.target.value); setPage(0); }}
-                  style={{
-                    width: "100%", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
-                    border: aumFilter !== "any" ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
-                    background: aumFilter !== "any" ? "var(--accent-light)" : "var(--surface)",
-                    color: aumFilter !== "any" ? "var(--accent)" : "var(--text-secondary)",
-                    cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none",
-                    appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238792A8' d='M3 5l3 3 3-3'/%3E%3C/svg%3E\")",
-                    backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
-                  }}>
-                  <option value="any">Any size</option>
-                  <option value="u1b" disabled={!facets.aum.u1b}>Under $1B (small){!facets.aum.u1b ? " — no matches" : ""}</option>
-                  <option value="1b_10b" disabled={!facets.aum["1b_10b"]}>$1B – $10B{!facets.aum["1b_10b"] ? " — no matches" : ""}</option>
-                  <option value="10b_50b" disabled={!facets.aum["10b_50b"]}>$10B – $50B{!facets.aum["10b_50b"] ? " — no matches" : ""}</option>
-                  <option value="50b_100b" disabled={!facets.aum["50b_100b"]}>$50B – $100B{!facets.aum["50b_100b"] ? " — no matches" : ""}</option>
-                  <option value="100bp" disabled={!facets.aum["100bp"]}>$100B+ (mega){!facets.aum["100bp"] ? " — no matches" : ""}</option>
-                </select>
+                <SingleChipSelect
+                  value={aumFilter}
+                  onChange={v => { setAumFilter(v); setPage(0); }}
+                  disabledOptions={facets.aum}
+                  options={[
+                    { key: "u1b", label: "Under $1B" },
+                    { key: "1b_10b", label: "$1B–$10B" },
+                    { key: "10b_50b", label: "$10B–$50B" },
+                    { key: "50b_100b", label: "$50B–$100B" },
+                    { key: "100bp", label: "$100B+" },
+                  ]}
+                />
               </FilterSection>
 
               {/* Dividend Yield */}
               <FilterSection title="Dividend Yield" defaultOpen={false}>
-                <select value={divYieldFilter} onChange={e => { setDivYieldFilter(e.target.value); setPage(0); }}
-                  style={{
-                    width: "100%", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
-                    border: divYieldFilter !== "any" ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
-                    background: divYieldFilter !== "any" ? "var(--accent-light)" : "var(--surface)",
-                    color: divYieldFilter !== "any" ? "var(--accent)" : "var(--text-secondary)",
-                    cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none",
-                    appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238792A8' d='M3 5l3 3 3-3'/%3E%3C/svg%3E\")",
-                    backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
-                  }}>
-                  <option value="any">Any yield</option>
-                  <option value="none" disabled={!facets.divYield.none}>No dividend (0%){!facets.divYield.none ? " — no matches" : ""}</option>
-                  <option value="0_1" disabled={!facets.divYield["0_1"]}>0% – 1% (low){!facets.divYield["0_1"] ? " — no matches" : ""}</option>
-                  <option value="1_3" disabled={!facets.divYield["1_3"]}>1% – 3% (moderate){!facets.divYield["1_3"] ? " — no matches" : ""}</option>
-                  <option value="3_5" disabled={!facets.divYield["3_5"]}>3% – 5% (high){!facets.divYield["3_5"] ? " — no matches" : ""}</option>
-                  <option value="5p" disabled={!facets.divYield["5p"]}>5%+ (very high){!facets.divYield["5p"] ? " — no matches" : ""}</option>
-                </select>
+                <SingleChipSelect
+                  value={divYieldFilter}
+                  onChange={v => { setDivYieldFilter(v); setPage(0); }}
+                  disabledOptions={facets.divYield}
+                  options={[
+                    { key: "none", label: "None (0%)" },
+                    { key: "0_1", label: "0–1%" },
+                    { key: "1_3", label: "1–3%" },
+                    { key: "3_5", label: "3–5%" },
+                    { key: "5p", label: "5%+" },
+                  ]}
+                />
               </FilterSection>
 
               {/* Fund Provider */}
