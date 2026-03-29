@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { initTelemetry, trackEvent } from "./telemetry";
 
 // ─── ETF Dataset (derived from publicly available market data) ───
 const ETF_DATA = [
@@ -343,6 +344,9 @@ export default function ETFFinderApp() {
   const [sidebarOpen, setSidebarOpen] = useState(typeof window !== "undefined" ? window.innerWidth >= 768 : true);
   const PAGE_SIZE = 8;
 
+  // Initialize telemetry on first render
+  useEffect(() => { initTelemetry('etf-finder'); }, []);
+
   const toggleChip = useCallback((list, setList) => (val) => {
     setList(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
     setPage(0);
@@ -356,6 +360,9 @@ export default function ETFFinderApp() {
       m.keywords.some(k => lower.includes(k) || k.includes(lower))
     );
     setMatchedInterests(matches);
+    if (matches.length > 0) {
+      trackEvent('interest_search', { query: searchText.slice(0, 50), matches: matches.map(m => m.label) });
+    }
   }, [searchText]);
 
   const availableIndustries = useMemo(() => {
@@ -424,6 +431,32 @@ export default function ETFFinderApp() {
       return true;
     });
   }, [sectors, industries, riskCats, perfFilters, matchedInterests, assetClasses, geoFocus, providers, esgOnly, expenseFilter, aumFilter, divYieldFilter, styleBoxSelection]);
+
+  // Track filter changes — debounced to avoid spamming on rapid clicks
+  const filterTrackTimer = useRef(null);
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    if (filterTrackTimer.current) clearTimeout(filterTrackTimer.current);
+    filterTrackTimer.current = setTimeout(() => {
+      const activeFilters = {};
+      if (sectors.length) activeFilters.sectors = sectors;
+      if (industries.length) activeFilters.industries = industries;
+      if (riskCats.length) activeFilters.risk = riskCats;
+      if (assetClasses.length) activeFilters.assetClass = assetClasses;
+      if (geoFocus.length) activeFilters.geo = geoFocus;
+      if (providers.length) activeFilters.providers = providers;
+      if (esgOnly) activeFilters.esg = true;
+      if (expenseFilter !== "any") activeFilters.expense = expenseFilter;
+      if (aumFilter !== "any") activeFilters.aum = aumFilter;
+      if (divYieldFilter !== "any") activeFilters.divYield = divYieldFilter;
+      if (Object.keys(perfFilters).length) activeFilters.perf = perfFilters;
+      if (styleBoxSelection.length) activeFilters.style = styleBoxSelection;
+      if (Object.keys(activeFilters).length > 0) {
+        trackEvent('filter_applied', { filters: activeFilters, results: filtered.length });
+      }
+    }, 500);
+  }, [sectors, industries, riskCats, perfFilters, assetClasses, geoFocus, providers, esgOnly, expenseFilter, aumFilter, divYieldFilter, styleBoxSelection, filtered.length]);
 
   // Faceted availability — compute which filter options would produce results
   // For each filter category, we re-run the filter WITHOUT that category's constraint
@@ -584,11 +617,13 @@ export default function ETFFinderApp() {
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
 
   const handleSort = (col) => {
+    trackEvent('sort_changed', { column: col });
     if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortCol(col); setSortDir("desc"); }
   };
 
   const clearAll = () => {
+    trackEvent('filter_cleared', { action: 'clear_all' });
     setSectors([]); setIndustries([]); setRiskCats([]);
     setSearchText(""); setMatchedInterests([]);
     setPerfFilters({});
@@ -600,10 +635,12 @@ export default function ETFFinderApp() {
 
   const addToPackage = (etf) => {
     if (!etfPackage.find(e => e.ticker === etf.ticker)) {
+      trackEvent('etf_added_to_package', { ticker: etf.ticker, sector: etf.sector });
       setEtfPackage(prev => [...prev, etf]);
     }
   };
   const removeFromPackage = (ticker) => {
+    trackEvent('etf_removed_from_package', { ticker });
     setEtfPackage(prev => prev.filter(e => e.ticker !== ticker));
     if (detailETF?.ticker === ticker) setDetailETF(null);
   };
@@ -712,7 +749,7 @@ export default function ETFFinderApp() {
                 {etfPackage.length} in package
               </span>
             )}
-            <button onClick={() => setSidebarOpen(s => !s)} style={{
+            <button onClick={() => { setSidebarOpen(s => !s); trackEvent('sidebar_toggled', { action: sidebarOpen ? 'close' : 'open' }); }} style={{
               background: sidebarOpen && !isMobile ? "var(--accent-light)" : "var(--surface)",
               border: sidebarOpen && !isMobile ? "1px solid var(--accent)" : "1px solid var(--border)", borderRadius: 8,
               padding: isMobile ? "8px 14px" : "6px 14px", fontSize: 13, cursor: "pointer",
@@ -1154,7 +1191,11 @@ export default function ETFFinderApp() {
                       return (
                         <React.Fragment key={etf.ticker}>
                           <tr className="etf-row"
-                            onClick={() => setExpandedTicker(isExpanded ? null : etf.ticker)}
+                            onClick={() => {
+                              const expanding = !isExpanded;
+                              setExpandedTicker(expanding ? etf.ticker : null);
+                              trackEvent(expanding ? 'etf_expanded' : 'etf_collapsed', { ticker: etf.ticker, sector: etf.sector });
+                            }}
                             style={{
                               borderBottom: isExpanded ? "none" : "1px solid var(--border)",
                               background: inPkg ? "var(--accent-light)" : "transparent",
@@ -1327,14 +1368,14 @@ export default function ETFFinderApp() {
                     {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sorted.length)} of {sorted.length}
                   </span>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
+                    <button disabled={page === 0} onClick={() => { setPage(p => p - 1); trackEvent('page_changed', { direction: 'prev' }); }}
                       style={{
                         padding: "4px 12px", borderRadius: 6, border: "1px solid var(--border)",
                         background: "var(--surface)", cursor: page === 0 ? "default" : "pointer",
                         fontSize: 11, fontWeight: 500, color: page === 0 ? "var(--border-strong)" : "var(--text-secondary)",
                         fontFamily: "'DM Sans', sans-serif",
                       }}>← Prev</button>
-                    <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}
+                    <button disabled={page >= totalPages - 1} onClick={() => { setPage(p => p + 1); trackEvent('page_changed', { direction: 'next' }); }}
                       style={{
                         padding: "4px 12px", borderRadius: 6, border: "1px solid var(--border)",
                         background: "var(--surface)", cursor: page >= totalPages - 1 ? "default" : "pointer",
@@ -1374,7 +1415,7 @@ export default function ETFFinderApp() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {etfPackage.length > 0 && (
-                    <span onClick={(e) => { e.stopPropagation(); setEtfPackage([]); setDetailETF(null); }} style={{
+                    <span onClick={(e) => { e.stopPropagation(); setEtfPackage([]); setDetailETF(null); trackEvent('package_cleared', {}); }} style={{
                       fontSize: 11, color: "var(--red)", fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
                     }}>Clear</span>
                   )}
@@ -1674,7 +1715,7 @@ export default function ETFFinderApp() {
           <p style={{ fontSize: isMobile ? 10 : 12, color: "var(--text-muted)", lineHeight: 1.5, maxWidth: 700 }}>
             <strong style={{ color: "var(--text-secondary)" }}>Disclaimer:</strong> {isMobile ? "Sample data only. Not real-time. Not investment advice." : "All data shown is sample and illustrative only — not real-time, not live, and not sourced from any financial data provider. This is a technology demonstration. Not investment advice. Do not use for investment decisions."}
           </p>
-          <button onClick={() => setShowDisclosure(true)} style={{
+          <button onClick={() => { setShowDisclosure(true); trackEvent('disclosure_opened', {}); }} style={{
             background: "var(--accent-light)", border: "1px solid var(--accent)",
             borderRadius: 8, padding: isMobile ? "6px 12px" : "7px 18px", fontSize: isMobile ? 11 : 12, fontWeight: 600,
             color: "var(--accent)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
