@@ -1,5 +1,13 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { initTelemetry, trackEvent } from "./telemetry";
+import { initTelemetry, trackEvent, setUserId, clearUserId } from "./telemetry";
+import { createClient } from "@supabase/supabase-js";
+
+// ─── Supabase client ───
+// The anon key is a public client key — safe to include in frontend code per Supabase docs.
+// Row Level Security on Supabase protects data. This key only allows auth operations.
+const SUPABASE_URL = "https://cedfqqfuebfvdfrqkkbz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlZGZxcWZ1ZWJmdmRmcnFra2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MjE3NTgsImV4cCI6MjA5MDM5Nzc1OH0.tlE3GoJVb2KyaNdgWkvw5fpTCXPJ4iCTxLMhos8JtxE"; // REPLACE with your anon key from Supabase dashboard
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ─── ETF Dataset (derived from publicly available market data) ───
 const ETF_DATA = [
@@ -342,10 +350,56 @@ export default function ETFFinderApp() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(typeof window !== "undefined" ? window.innerWidth >= 768 : true);
+  const [user, setUser] = useState(null);
   const PAGE_SIZE = 8;
 
   // Initialize telemetry on first render
   useEffect(() => { initTelemetry('etf-finder'); }, []);
+
+  // Auth state management
+  useEffect(() => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        setUserId(session.user.id);
+      }
+    });
+
+    // Listen for auth changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        setUserId(session.user.id);
+        trackEvent('login_completed', { provider: 'google' });
+      } else {
+        setUser(null);
+        clearUserId();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + '/etf-finder/',
+      },
+    });
+    if (error) {
+      console.error('Login error:', error);
+      trackEvent('login_failed', { error: error.message });
+    }
+  };
+
+  const handleLogout = async () => {
+    trackEvent('logout', {});
+    await supabase.auth.signOut();
+    setUser(null);
+    clearUserId();
+  };
 
   const toggleChip = useCallback((list, setList) => (val) => {
     setList(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
@@ -758,6 +812,34 @@ export default function ETFFinderApp() {
             }}>
               {isMobile ? "Filters" : (sidebarOpen ? "Hide Filters" : "Show Filters")}
             </button>
+            {user ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {user.user_metadata?.avatar_url && (
+                  <img src={user.user_metadata.avatar_url} alt="" style={{
+                    width: 28, height: 28, borderRadius: "50%", border: "1.5px solid var(--border)",
+                  }} />
+                )}
+                {!isMobile && (
+                  <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 }}>
+                    {user.user_metadata?.full_name?.split(' ')[0] || 'User'}
+                  </span>
+                )}
+                <button onClick={handleLogout} style={{
+                  background: "none", border: "1px solid var(--border)", borderRadius: 8,
+                  padding: "5px 12px", fontSize: 11, cursor: "pointer",
+                  color: "var(--text-muted)", fontFamily: "'DM Sans', sans-serif",
+                }}>Sign out</button>
+              </div>
+            ) : (
+              <button onClick={handleLogin} style={{
+                background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
+                padding: "6px 14px", fontSize: 12, cursor: "pointer",
+                color: "var(--text-secondary)", fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
+                display: "flex", alignItems: "center", gap: 6,
+              }}>
+                <span style={{ fontSize: 14 }}>G</span> Sign in
+              </button>
+            )}
           </div>
         </header>
 
