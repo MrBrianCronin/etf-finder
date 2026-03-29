@@ -297,20 +297,22 @@ function PerfDropdown({ label, value, onChange }) {
   );
 }
 
-function ChipSelect({ options, selected, onToggle, multi = true }) {
+function ChipSelect({ options, selected, onToggle, disabledOptions, multi = true }) {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
       {options.map(opt => {
         const active = selected.includes(opt);
+        const disabled = disabledOptions && disabledOptions.has ? !disabledOptions.has(opt) : false;
         return (
-          <button key={opt} onClick={() => onToggle(opt)}
+          <button key={opt} onClick={() => !disabled && onToggle(opt)}
             style={{
               padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 500,
               border: active ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
-              background: active ? "var(--accent-light)" : "var(--surface)",
-              color: active ? "var(--accent)" : "var(--text-muted)",
-              cursor: "pointer", transition: "all 0.15s ease",
+              background: active ? "var(--accent-light)" : disabled ? "var(--bg)" : "var(--surface)",
+              color: active ? "var(--accent)" : disabled ? "var(--border-strong)" : "var(--text-muted)",
+              cursor: disabled ? "default" : "pointer", transition: "all 0.15s ease",
               fontFamily: "'DM Sans', sans-serif",
+              opacity: disabled ? 0.45 : 1,
             }}>
             {opt}
           </button>
@@ -507,6 +509,126 @@ export default function ETFFinderApp() {
       }
       return true;
     });
+  }, [sectors, industries, riskCats, perfFilters, matchedInterests, assetClasses, geoFocus, providers, esgOnly, expenseFilter, aumFilter, divYieldFilter, styleBoxSelection]);
+
+  // Faceted availability — compute which filter options would produce results
+  // For each filter category, we re-run the filter WITHOUT that category's constraint
+  // to see which options are still reachable given all other active filters
+  const facets = useMemo(() => {
+    const applyFilters = (etf, skip) => {
+      if (skip !== "sector" && sectors.length > 0 && !sectors.includes(etf.sector)) return false;
+      if (skip !== "industry" && industries.length > 0 && !industries.includes(etf.industry)) return false;
+      if (skip !== "risk" && riskCats.length > 0 && !riskCats.includes(etf.risk)) return false;
+      if (skip !== "assetClass" && assetClasses.length > 0 && !assetClasses.includes(etf.asset_class)) return false;
+      if (skip !== "geo" && geoFocus.length > 0 && !geoFocus.includes(etf.geo)) return false;
+      if (skip !== "provider" && providers.length > 0 && !providers.includes(etf.provider)) return false;
+      if (skip !== "esg" && esgOnly && !etf.esg) return false;
+      if (skip !== "style" && styleBoxSelection.length > 0) {
+        if (!etf.cap || !etf.style) return false;
+        if (!styleBoxSelection.includes(etf.cap + "-" + etf.style)) return false;
+      }
+      if (skip !== "expense" && expenseFilter !== "any") {
+        const e = etf.expense;
+        if (expenseFilter === "u010" && e >= 0.10) return false;
+        if (expenseFilter === "010_025" && (e < 0.10 || e >= 0.25)) return false;
+        if (expenseFilter === "025_050" && (e < 0.25 || e >= 0.50)) return false;
+        if (expenseFilter === "050_100" && (e < 0.50 || e >= 1.00)) return false;
+        if (expenseFilter === "100p" && e < 1.00) return false;
+      }
+      if (skip !== "aum" && aumFilter !== "any") {
+        const a = etf.aum;
+        if (aumFilter === "u1b" && a >= 1000) return false;
+        if (aumFilter === "1b_10b" && (a < 1000 || a >= 10000)) return false;
+        if (aumFilter === "10b_50b" && (a < 10000 || a >= 50000)) return false;
+        if (aumFilter === "50b_100b" && (a < 50000 || a >= 100000)) return false;
+        if (aumFilter === "100bp" && a < 100000) return false;
+      }
+      if (skip !== "divYield" && divYieldFilter !== "any") {
+        const d = etf.div_yield;
+        if (divYieldFilter === "none" && d > 0.1) return false;
+        if (divYieldFilter === "0_1" && (d < 0 || d >= 1)) return false;
+        if (divYieldFilter === "1_3" && (d < 1 || d >= 3)) return false;
+        if (divYieldFilter === "3_5" && (d < 3 || d >= 5)) return false;
+        if (divYieldFilter === "5p" && d < 5) return false;
+      }
+      for (const range of PERF_RANGES) {
+        const pf = perfFilters[range];
+        if (pf.key === "any") continue;
+        const val = etf.perf[range];
+        if (pf.min !== null && pf.min !== -Infinity && val < pf.min) return false;
+        if (pf.max !== null && pf.max !== Infinity && val > pf.max) return false;
+        if (pf.key === "positive" && val <= 0) return false;
+        if (pf.key === "negative" && val >= 0) return false;
+      }
+      if (matchedInterests.length > 0) {
+        const allTags = matchedInterests.flatMap(m => m.tags);
+        const hasMatch = etf.tags.some(t => allTags.some(mt => t.includes(mt) || mt.includes(t)));
+        if (!hasMatch) return false;
+      }
+      return true;
+    };
+
+    const collect = (skip, field) => {
+      const vals = new Set();
+      ETF_DATA.forEach(etf => { if (applyFilters(etf, skip)) vals.add(etf[field]); });
+      return vals;
+    };
+
+    // For dropdown filters, check which bucket values have matches
+    const checkExpense = (key) => {
+      return ETF_DATA.some(etf => {
+        if (!applyFilters(etf, "expense")) return false;
+        const e = etf.expense;
+        if (key === "u010") return e < 0.10;
+        if (key === "010_025") return e >= 0.10 && e < 0.25;
+        if (key === "025_050") return e >= 0.25 && e < 0.50;
+        if (key === "050_100") return e >= 0.50 && e < 1.00;
+        if (key === "100p") return e >= 1.00;
+        return true;
+      });
+    };
+    const checkAum = (key) => {
+      return ETF_DATA.some(etf => {
+        if (!applyFilters(etf, "aum")) return false;
+        const a = etf.aum;
+        if (key === "u1b") return a < 1000;
+        if (key === "1b_10b") return a >= 1000 && a < 10000;
+        if (key === "10b_50b") return a >= 10000 && a < 50000;
+        if (key === "50b_100b") return a >= 50000 && a < 100000;
+        if (key === "100bp") return a >= 100000;
+        return true;
+      });
+    };
+    const checkDivYield = (key) => {
+      return ETF_DATA.some(etf => {
+        if (!applyFilters(etf, "divYield")) return false;
+        const d = etf.div_yield;
+        if (key === "none") return d <= 0.1;
+        if (key === "0_1") return d >= 0 && d < 1;
+        if (key === "1_3") return d >= 1 && d < 3;
+        if (key === "3_5") return d >= 3 && d < 5;
+        if (key === "5p") return d >= 5;
+        return true;
+      });
+    };
+
+    return {
+      sectors: collect("sector", "sector"),
+      industries: collect("industry", "industry"),
+      risks: collect("risk", "risk"),
+      assetClasses: collect("assetClass", "asset_class"),
+      geos: collect("geo", "geo"),
+      providers: collect("provider", "provider"),
+      hasEsg: ETF_DATA.some(etf => etf.esg && applyFilters(etf, "esg")),
+      expense: { u010: checkExpense("u010"), "010_025": checkExpense("010_025"), "025_050": checkExpense("025_050"), "050_100": checkExpense("050_100"), "100p": checkExpense("100p") },
+      aum: { u1b: checkAum("u1b"), "1b_10b": checkAum("1b_10b"), "10b_50b": checkAum("10b_50b"), "50b_100b": checkAum("50b_100b"), "100bp": checkAum("100bp") },
+      divYield: { none: checkDivYield("none"), "0_1": checkDivYield("0_1"), "1_3": checkDivYield("1_3"), "3_5": checkDivYield("3_5"), "5p": checkDivYield("5p") },
+      styleCells: (() => {
+        const s = new Set();
+        ETF_DATA.forEach(etf => { if (etf.cap && etf.style && applyFilters(etf, "style")) s.add(etf.cap + "-" + etf.style); });
+        return s;
+      })(),
+    };
   }, [sectors, industries, riskCats, perfFilters, matchedInterests, assetClasses, geoFocus, providers, esgOnly, expenseFilter, aumFilter, divYieldFilter, styleBoxSelection]);
 
   // Sort
@@ -730,12 +852,12 @@ export default function ETFFinderApp() {
 
               {/* Risk Category */}
               <FilterSection title="Risk Category" defaultOpen={true}>
-                <ChipSelect options={RISK_CATEGORIES} selected={riskCats} onToggle={toggleChip(riskCats, setRiskCats)} />
+                <ChipSelect options={RISK_CATEGORIES} selected={riskCats} onToggle={toggleChip(riskCats, setRiskCats)} disabledOptions={facets.risks} />
               </FilterSection>
 
               {/* Sector */}
               <FilterSection title="Sector" defaultOpen={true}>
-                <ChipSelect options={SECTORS} selected={sectors} onToggle={(val) => {
+                <ChipSelect options={SECTORS} selected={sectors} disabledOptions={facets.sectors} onToggle={(val) => {
                   const next = sectors.includes(val) ? sectors.filter(v => v !== val) : [...sectors, val];
                   setSectors(next); setPage(0);
                   if (next.length > 0) {
@@ -748,7 +870,7 @@ export default function ETFFinderApp() {
 
               {/* Industry */}
               <FilterSection title="Industry" defaultOpen={false}>
-                <ChipSelect options={availableIndustries} selected={industries} onToggle={toggleChip(industries, setIndustries)} />
+                <ChipSelect options={availableIndustries} selected={industries} onToggle={toggleChip(industries, setIndustries)} disabledOptions={facets.industries} />
               </FilterSection>
 
               {/* Performance */}
@@ -764,12 +886,12 @@ export default function ETFFinderApp() {
 
               {/* Asset Class */}
               <FilterSection title="Asset Class" defaultOpen={false}>
-                <ChipSelect options={ASSET_CLASSES} selected={assetClasses} onToggle={toggleChip(assetClasses, setAssetClasses)} />
+                <ChipSelect options={ASSET_CLASSES} selected={assetClasses} onToggle={toggleChip(assetClasses, setAssetClasses)} disabledOptions={facets.assetClasses} />
               </FilterSection>
 
               {/* Geographic Focus */}
               <FilterSection title="Geographic Focus" defaultOpen={false}>
-                <ChipSelect options={GEO_OPTIONS} selected={geoFocus} onToggle={toggleChip(geoFocus, setGeoFocus)} />
+                <ChipSelect options={GEO_OPTIONS} selected={geoFocus} onToggle={toggleChip(geoFocus, setGeoFocus)} disabledOptions={facets.geos} />
               </FilterSection>
 
               {/* Expense Ratio */}
@@ -785,11 +907,11 @@ export default function ETFFinderApp() {
                     backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
                   }}>
                   <option value="any">Any expense ratio</option>
-                  <option value="u010">Under 0.10% (ultra-low)</option>
-                  <option value="010_025">0.10% – 0.25%</option>
-                  <option value="025_050">0.25% – 0.50%</option>
-                  <option value="050_100">0.50% – 1.00%</option>
-                  <option value="100p">1.00%+ (high)</option>
+                  <option value="u010" disabled={!facets.expense.u010}>Under 0.10% (ultra-low){!facets.expense.u010 ? " — no matches" : ""}</option>
+                  <option value="010_025" disabled={!facets.expense["010_025"]}>0.10% – 0.25%{!facets.expense["010_025"] ? " — no matches" : ""}</option>
+                  <option value="025_050" disabled={!facets.expense["025_050"]}>0.25% – 0.50%{!facets.expense["025_050"] ? " — no matches" : ""}</option>
+                  <option value="050_100" disabled={!facets.expense["050_100"]}>0.50% – 1.00%{!facets.expense["050_100"] ? " — no matches" : ""}</option>
+                  <option value="100p" disabled={!facets.expense["100p"]}>1.00%+ (high){!facets.expense["100p"] ? " — no matches" : ""}</option>
                 </select>
               </FilterSection>
 
@@ -806,11 +928,11 @@ export default function ETFFinderApp() {
                     backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
                   }}>
                   <option value="any">Any size</option>
-                  <option value="u1b">Under $1B (small)</option>
-                  <option value="1b_10b">$1B – $10B</option>
-                  <option value="10b_50b">$10B – $50B</option>
-                  <option value="50b_100b">$50B – $100B</option>
-                  <option value="100bp">$100B+ (mega)</option>
+                  <option value="u1b" disabled={!facets.aum.u1b}>Under $1B (small){!facets.aum.u1b ? " — no matches" : ""}</option>
+                  <option value="1b_10b" disabled={!facets.aum["1b_10b"]}>$1B – $10B{!facets.aum["1b_10b"] ? " — no matches" : ""}</option>
+                  <option value="10b_50b" disabled={!facets.aum["10b_50b"]}>$10B – $50B{!facets.aum["10b_50b"] ? " — no matches" : ""}</option>
+                  <option value="50b_100b" disabled={!facets.aum["50b_100b"]}>$50B – $100B{!facets.aum["50b_100b"] ? " — no matches" : ""}</option>
+                  <option value="100bp" disabled={!facets.aum["100bp"]}>$100B+ (mega){!facets.aum["100bp"] ? " — no matches" : ""}</option>
                 </select>
               </FilterSection>
 
@@ -827,25 +949,26 @@ export default function ETFFinderApp() {
                     backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
                   }}>
                   <option value="any">Any yield</option>
-                  <option value="none">No dividend (0%)</option>
-                  <option value="0_1">0% – 1% (low)</option>
-                  <option value="1_3">1% – 3% (moderate)</option>
-                  <option value="3_5">3% – 5% (high)</option>
-                  <option value="5p">5%+ (very high)</option>
+                  <option value="none" disabled={!facets.divYield.none}>No dividend (0%){!facets.divYield.none ? " — no matches" : ""}</option>
+                  <option value="0_1" disabled={!facets.divYield["0_1"]}>0% – 1% (low){!facets.divYield["0_1"] ? " — no matches" : ""}</option>
+                  <option value="1_3" disabled={!facets.divYield["1_3"]}>1% – 3% (moderate){!facets.divYield["1_3"] ? " — no matches" : ""}</option>
+                  <option value="3_5" disabled={!facets.divYield["3_5"]}>3% – 5% (high){!facets.divYield["3_5"] ? " — no matches" : ""}</option>
+                  <option value="5p" disabled={!facets.divYield["5p"]}>5%+ (very high){!facets.divYield["5p"] ? " — no matches" : ""}</option>
                 </select>
               </FilterSection>
 
               {/* Fund Provider */}
               <FilterSection title="Fund Provider" defaultOpen={false}>
-                <ChipSelect options={PROVIDERS} selected={providers} onToggle={toggleChip(providers, setProviders)} />
+                <ChipSelect options={PROVIDERS} selected={providers} onToggle={toggleChip(providers, setProviders)} disabledOptions={facets.providers} />
               </FilterSection>
 
               {/* ESG Toggle */}
               <FilterSection title="ESG / Sustainability" defaultOpen={false}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <button onClick={() => { setEsgOnly(v => !v); setPage(0); }}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, opacity: !facets.hasEsg && !esgOnly ? 0.45 : 1 }}>
+                  <button onClick={() => { if (facets.hasEsg || esgOnly) { setEsgOnly(v => !v); setPage(0); } }}
                     style={{
-                      width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
+                      width: 44, height: 24, borderRadius: 12, border: "none",
+                      cursor: facets.hasEsg || esgOnly ? "pointer" : "default",
                       background: esgOnly ? "var(--green)" : "var(--border)",
                       position: "relative", transition: "background 0.2s ease",
                       flexShrink: 0,
@@ -881,22 +1004,24 @@ export default function ETFFinderApp() {
                       {["Value", "Blend", "Growth"].map(sty => {
                         const key = cap + "-" + sty;
                         const isActive = styleBoxSelection.includes(key);
+                        const available = facets.styleCells.has(key);
                         const count = ETF_DATA.filter(e => e.cap === cap && e.style === sty).length;
                         return (
                           <button key={key} onClick={() => {
+                            if (!available && !isActive) return;
                             setStyleBoxSelection(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
                             setPage(0);
                           }} style={{
                             aspectRatio: "1", border: isActive ? "2px solid var(--accent)" : "1.5px solid var(--border)",
-                            borderRadius: 6, cursor: "pointer", transition: "all 0.15s ease",
-                            background: isActive ? "var(--accent-light)" : count > 0 ? "var(--surface)" : "var(--bg)",
+                            borderRadius: 6, cursor: available || isActive ? "pointer" : "default", transition: "all 0.15s ease",
+                            background: isActive ? "var(--accent-light)" : available ? "var(--surface)" : "var(--bg)",
                             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                            opacity: count > 0 ? 1 : 0.4,
+                            opacity: available || isActive ? 1 : 0.3,
                           }}>
                             <span style={{
                               fontSize: 14, fontWeight: 700,
                               fontFamily: "'JetBrains Mono', monospace",
-                              color: isActive ? "var(--accent)" : "var(--text-primary)",
+                              color: isActive ? "var(--accent)" : available ? "var(--text-primary)" : "var(--border-strong)",
                             }}>{count}</span>
                           </button>
                         );
