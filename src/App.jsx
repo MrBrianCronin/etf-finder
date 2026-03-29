@@ -297,8 +297,6 @@ function PerfDropdown({ label, value, onChange }) {
   );
 }
 
-function ChipSelect({ options, selected, onToggle, disabledOptions, multi = true }) {
-
 function SingleChipSelect({ options, value, onChange, disabledOptions }) {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
@@ -326,6 +324,8 @@ function SingleChipSelect({ options, value, onChange, disabledOptions }) {
     </div>
   );
 }
+
+function ChipSelect({ options, selected, onToggle, disabledOptions, multi = true }) {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
       {options.map(opt => {
