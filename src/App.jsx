@@ -385,7 +385,7 @@ export default function ETFFinderApp() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://etf-finder-psi.vercel.app/',
+        redirectTo: 'https://briancronin.ai/etf-finder/',
       },
     });
     if (error) {
