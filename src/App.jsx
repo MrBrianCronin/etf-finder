@@ -467,6 +467,7 @@ export default function ETFFinderApp() {
       }
       for (const [range, rangeKey] of Object.entries(perfFilters)) {
         if (!rangeKey) continue;
+        if (skip === "perf:" + range) continue;
         const opt = PERF_RANGE_OPTIONS.find(o => o.key === rangeKey);
         if (!opt) continue;
         const val = etf.perf[range];
@@ -486,6 +487,23 @@ export default function ETFFinderApp() {
       ETF_DATA.forEach(etf => { if (applyFilters(etf, skip)) vals.add(etf[field]); });
       return vals;
     };
+
+    // For each active perf period, check which range options have matching ETFs
+    const perfAvail = {};
+    for (const range of PERF_RANGES) {
+      if (perfFilters[range] === undefined) continue;
+      const avail = {};
+      PERF_RANGE_OPTIONS.forEach(opt => {
+        avail[opt.key] = ETF_DATA.some(etf => {
+          if (!applyFilters(etf, "perf:" + range)) return false;
+          const val = etf.perf[range];
+          if (opt.min !== -Infinity && val < opt.min) return false;
+          if (opt.max !== Infinity && val > opt.max) return false;
+          return true;
+        });
+      });
+      perfAvail[range] = avail;
+    }
 
     // For dropdown filters, check which bucket values have matches
     const checkExpense = (key) => {
@@ -541,6 +559,7 @@ export default function ETFFinderApp() {
         ETF_DATA.forEach(etf => { if (etf.cap && etf.style && applyFilters(etf, "style")) s.add(etf.cap + "-" + etf.style); });
         return s;
       })(),
+      perfAvail,
     };
   }, [sectors, industries, riskCats, perfFilters, matchedInterests, assetClasses, geoFocus, providers, esgOnly, expenseFilter, aumFilter, divYieldFilter, styleBoxSelection]);
 
@@ -828,8 +847,11 @@ export default function ETFFinderApp() {
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                       {PERF_RANGE_OPTIONS.map(opt => {
                         const active = perfFilters[range] === opt.key;
+                        const available = facets.perfAvail[range] ? facets.perfAvail[range][opt.key] : true;
+                        const disabled = !available && !active;
                         return (
                           <button key={opt.key} onClick={() => {
+                            if (disabled) return;
                             setPerfFilters(prev => ({
                               ...prev,
                               [range]: active ? null : opt.key,
@@ -839,10 +861,11 @@ export default function ETFFinderApp() {
                             style={{
                               padding: "3px 10px", borderRadius: 14, fontSize: 11, fontWeight: 500,
                               border: active ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
-                              background: active ? "var(--accent-light)" : "var(--surface)",
-                              color: active ? "var(--accent)" : "var(--text-muted)",
-                              cursor: "pointer", transition: "all 0.15s ease",
+                              background: active ? "var(--accent-light)" : disabled ? "var(--bg)" : "var(--surface)",
+                              color: active ? "var(--accent)" : disabled ? "var(--border-strong)" : "var(--text-muted)",
+                              cursor: disabled ? "default" : "pointer", transition: "all 0.15s ease",
                               fontFamily: "'DM Sans', sans-serif",
+                              opacity: disabled ? 0.45 : 1,
                             }}>
                             {opt.label}
                           </button>
