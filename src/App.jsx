@@ -320,6 +320,15 @@ export default function ETFFinderApp() {
   const [perfFilters, setPerfFilters] = useState(
     Object.fromEntries(PERF_RANGES.map(r => [r, PERF_PRESETS[0]]))
   );
+  // Phase 2 filters
+  const [assetClasses, setAssetClasses] = useState([]);
+  const [geoFocus, setGeoFocus] = useState([]);
+  const [providers, setProviders] = useState([]);
+  const [esgOnly, setEsgOnly] = useState(false);
+  const [expenseFilter, setExpenseFilter] = useState("any");
+  const [aumFilter, setAumFilter] = useState("any");
+  const [divYieldFilter, setDivYieldFilter] = useState("any");
+
   const [sortCol, setSortCol] = useState("ticker");
   const [sortDir, setSortDir] = useState("asc");
   const [showDisclosure, setShowDisclosure] = useState(false);
@@ -360,6 +369,39 @@ export default function ETFFinderApp() {
       if (sectors.length > 0 && !sectors.includes(etf.sector)) return false;
       if (industries.length > 0 && !industries.includes(etf.industry)) return false;
       if (riskCats.length > 0 && !riskCats.includes(etf.risk)) return false;
+      // Phase 2 filters
+      if (assetClasses.length > 0 && !assetClasses.includes(etf.asset_class)) return false;
+      if (geoFocus.length > 0 && !geoFocus.includes(etf.geo)) return false;
+      if (providers.length > 0 && !providers.includes(etf.provider)) return false;
+      if (esgOnly && !etf.esg) return false;
+      // Expense ratio
+      if (expenseFilter !== "any") {
+        const e = etf.expense;
+        if (expenseFilter === "u010" && e >= 0.10) return false;
+        if (expenseFilter === "010_025" && (e < 0.10 || e >= 0.25)) return false;
+        if (expenseFilter === "025_050" && (e < 0.25 || e >= 0.50)) return false;
+        if (expenseFilter === "050_100" && (e < 0.50 || e >= 1.00)) return false;
+        if (expenseFilter === "100p" && e < 1.00) return false;
+      }
+      // AUM
+      if (aumFilter !== "any") {
+        const a = etf.aum;
+        if (aumFilter === "u1b" && a >= 1000) return false;
+        if (aumFilter === "1b_10b" && (a < 1000 || a >= 10000)) return false;
+        if (aumFilter === "10b_50b" && (a < 10000 || a >= 50000)) return false;
+        if (aumFilter === "50b_100b" && (a < 50000 || a >= 100000)) return false;
+        if (aumFilter === "100bp" && a < 100000) return false;
+      }
+      // Dividend yield
+      if (divYieldFilter !== "any") {
+        const d = etf.div_yield;
+        if (divYieldFilter === "none" && d > 0.1) return false;
+        if (divYieldFilter === "0_1" && (d < 0 || d >= 1)) return false;
+        if (divYieldFilter === "1_3" && (d < 1 || d >= 3)) return false;
+        if (divYieldFilter === "3_5" && (d < 3 || d >= 5)) return false;
+        if (divYieldFilter === "5p" && d < 5) return false;
+      }
+      // Performance ranges
       for (const range of PERF_RANGES) {
         const pf = perfFilters[range];
         if (pf.key === "any") continue;
@@ -376,7 +418,7 @@ export default function ETFFinderApp() {
       }
       return true;
     });
-  }, [sectors, industries, riskCats, perfFilters, matchedInterests]);
+  }, [sectors, industries, riskCats, perfFilters, matchedInterests, assetClasses, geoFocus, providers, esgOnly, expenseFilter, aumFilter, divYieldFilter]);
 
   // Sort
   const sorted = useMemo(() => {
@@ -407,6 +449,8 @@ export default function ETFFinderApp() {
     setSectors([]); setIndustries([]); setRiskCats([]);
     setSearchText(""); setMatchedInterests([]);
     setPerfFilters(Object.fromEntries(PERF_RANGES.map(r => [r, PERF_PRESETS[0]])));
+    setAssetClasses([]); setGeoFocus([]); setProviders([]);
+    setEsgOnly(false); setExpenseFilter("any"); setAumFilter("any"); setDivYieldFilter("any");
     setPage(0);
   };
 
@@ -598,6 +642,110 @@ export default function ETFFinderApp() {
                     value={perfFilters[range]}
                     onChange={v => { setPerfFilters(prev => ({ ...prev, [range]: v })); setPage(0); }} />
                 ))}
+              </FilterSection>
+
+              {/* ── Phase 2 Filters ── */}
+
+              {/* Asset Class */}
+              <FilterSection title="Asset Class" defaultOpen={false}>
+                <ChipSelect options={ASSET_CLASSES} selected={assetClasses} onToggle={toggleChip(assetClasses, setAssetClasses)} />
+              </FilterSection>
+
+              {/* Geographic Focus */}
+              <FilterSection title="Geographic Focus" defaultOpen={false}>
+                <ChipSelect options={GEO_OPTIONS} selected={geoFocus} onToggle={toggleChip(geoFocus, setGeoFocus)} />
+              </FilterSection>
+
+              {/* Expense Ratio */}
+              <FilterSection title="Expense Ratio" defaultOpen={false}>
+                <select value={expenseFilter} onChange={e => { setExpenseFilter(e.target.value); setPage(0); }}
+                  style={{
+                    width: "100%", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
+                    border: expenseFilter !== "any" ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
+                    background: expenseFilter !== "any" ? "var(--accent-light)" : "var(--surface)",
+                    color: expenseFilter !== "any" ? "var(--accent)" : "var(--text-secondary)",
+                    cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none",
+                    appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238792A8' d='M3 5l3 3 3-3'/%3E%3C/svg%3E\")",
+                    backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
+                  }}>
+                  <option value="any">Any expense ratio</option>
+                  <option value="u010">Under 0.10% (ultra-low)</option>
+                  <option value="010_025">0.10% – 0.25%</option>
+                  <option value="025_050">0.25% – 0.50%</option>
+                  <option value="050_100">0.50% – 1.00%</option>
+                  <option value="100p">1.00%+ (high)</option>
+                </select>
+              </FilterSection>
+
+              {/* AUM */}
+              <FilterSection title="Assets Under Management" defaultOpen={false}>
+                <select value={aumFilter} onChange={e => { setAumFilter(e.target.value); setPage(0); }}
+                  style={{
+                    width: "100%", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
+                    border: aumFilter !== "any" ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
+                    background: aumFilter !== "any" ? "var(--accent-light)" : "var(--surface)",
+                    color: aumFilter !== "any" ? "var(--accent)" : "var(--text-secondary)",
+                    cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none",
+                    appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238792A8' d='M3 5l3 3 3-3'/%3E%3C/svg%3E\")",
+                    backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
+                  }}>
+                  <option value="any">Any size</option>
+                  <option value="u1b">Under $1B (small)</option>
+                  <option value="1b_10b">$1B – $10B</option>
+                  <option value="10b_50b">$10B – $50B</option>
+                  <option value="50b_100b">$50B – $100B</option>
+                  <option value="100bp">$100B+ (mega)</option>
+                </select>
+              </FilterSection>
+
+              {/* Dividend Yield */}
+              <FilterSection title="Dividend Yield" defaultOpen={false}>
+                <select value={divYieldFilter} onChange={e => { setDivYieldFilter(e.target.value); setPage(0); }}
+                  style={{
+                    width: "100%", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
+                    border: divYieldFilter !== "any" ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
+                    background: divYieldFilter !== "any" ? "var(--accent-light)" : "var(--surface)",
+                    color: divYieldFilter !== "any" ? "var(--accent)" : "var(--text-secondary)",
+                    cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none",
+                    appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238792A8' d='M3 5l3 3 3-3'/%3E%3C/svg%3E\")",
+                    backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
+                  }}>
+                  <option value="any">Any yield</option>
+                  <option value="none">No dividend (0%)</option>
+                  <option value="0_1">0% – 1% (low)</option>
+                  <option value="1_3">1% – 3% (moderate)</option>
+                  <option value="3_5">3% – 5% (high)</option>
+                  <option value="5p">5%+ (very high)</option>
+                </select>
+              </FilterSection>
+
+              {/* Fund Provider */}
+              <FilterSection title="Fund Provider" defaultOpen={false}>
+                <ChipSelect options={PROVIDERS} selected={providers} onToggle={toggleChip(providers, setProviders)} />
+              </FilterSection>
+
+              {/* ESG Toggle */}
+              <FilterSection title="ESG / Sustainability" defaultOpen={false}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button onClick={() => { setEsgOnly(v => !v); setPage(0); }}
+                    style={{
+                      width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
+                      background: esgOnly ? "var(--green)" : "var(--border)",
+                      position: "relative", transition: "background 0.2s ease",
+                      flexShrink: 0,
+                    }}>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: 9, background: "#fff",
+                      position: "absolute", top: 3,
+                      left: esgOnly ? 23 : 3,
+                      transition: "left 0.2s ease",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                    }} />
+                  </button>
+                  <span style={{ fontSize: 12, color: esgOnly ? "var(--green)" : "var(--text-muted)", fontWeight: 500 }}>
+                    {esgOnly ? "Showing ESG-rated only" : "Show all funds"}
+                  </span>
+                </div>
               </FilterSection>
             </aside>
           )}
