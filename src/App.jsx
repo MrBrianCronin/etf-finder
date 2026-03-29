@@ -1027,6 +1027,77 @@ export default function ETFFinderApp() {
           {/* ─── Results ─── */}
           <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
+            {/* ═══ Active Filter Summary ═══ */}
+            {(() => {
+              const chips = [];
+              if (searchText.trim()) chips.push({ label: "Interest: " + searchText, onRemove: () => setSearchText("") });
+              riskCats.forEach(r => chips.push({ label: "Risk: " + r, onRemove: () => setRiskCats(prev => prev.filter(v => v !== r)) }));
+              sectors.forEach(s => chips.push({ label: "Sector: " + s, onRemove: () => {
+                const next = sectors.filter(v => v !== s);
+                setSectors(next);
+                if (next.length > 0) {
+                  const valid = new Set();
+                  next.forEach(sec => (INDUSTRIES_BY_SECTOR[sec] || new Set()).forEach(i => valid.add(i)));
+                  setIndustries(prev => prev.filter(i => valid.has(i)));
+                }
+              }}));
+              industries.forEach(ind => chips.push({ label: "Industry: " + ind, onRemove: () => setIndustries(prev => prev.filter(v => v !== ind)) }));
+              Object.entries(perfFilters).forEach(([range, key]) => {
+                if (key) {
+                  const opt = PERF_RANGE_OPTIONS.find(o => o.key === key);
+                  chips.push({ label: range + ": " + (opt?.label || key), onRemove: () => setPerfFilters(prev => { const n = { ...prev }; delete n[range]; return n; }) });
+                }
+              });
+              assetClasses.forEach(a => chips.push({ label: "Asset: " + a, onRemove: () => setAssetClasses(prev => prev.filter(v => v !== a)) }));
+              geoFocus.forEach(g => chips.push({ label: "Geo: " + g, onRemove: () => setGeoFocus(prev => prev.filter(v => v !== g)) }));
+              if (expenseFilter !== "any") {
+                const labels = { u010: "Under 0.10%", "010_025": "0.10–0.25%", "025_050": "0.25–0.50%", "050_100": "0.50–1.00%", "100p": "1.00%+" };
+                chips.push({ label: "Expense: " + (labels[expenseFilter] || expenseFilter), onRemove: () => setExpenseFilter("any") });
+              }
+              if (aumFilter !== "any") {
+                const labels = { u1b: "Under $1B", "1b_10b": "$1B–$10B", "10b_50b": "$10B–$50B", "50b_100b": "$50B–$100B", "100bp": "$100B+" };
+                chips.push({ label: "AUM: " + (labels[aumFilter] || aumFilter), onRemove: () => setAumFilter("any") });
+              }
+              if (divYieldFilter !== "any") {
+                const labels = { none: "None", "0_1": "0–1%", "1_3": "1–3%", "3_5": "3–5%", "5p": "5%+" };
+                chips.push({ label: "Yield: " + (labels[divYieldFilter] || divYieldFilter), onRemove: () => setDivYieldFilter("any") });
+              }
+              providers.forEach(p => chips.push({ label: "Provider: " + p, onRemove: () => setProviders(prev => prev.filter(v => v !== p)) }));
+              if (esgOnly) chips.push({ label: "ESG Only", onRemove: () => setEsgOnly(false) });
+              styleBoxSelection.forEach(s => chips.push({ label: "Style: " + s, onRemove: () => setStyleBoxSelection(prev => prev.filter(v => v !== s)) }));
+
+              if (chips.length === 0) return null;
+
+              return (
+                <div style={{
+                  padding: "8px 16px", background: "var(--surface)", borderBottom: "1px solid var(--border)",
+                  display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", flexShrink: 0,
+                }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500, marginRight: 2 }}>Active filters:</span>
+                  {chips.map((chip, i) => (
+                    <span key={i} style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      padding: "3px 10px", borderRadius: 14, fontSize: 11, fontWeight: 500,
+                      background: "var(--accent-light)", color: "var(--accent)",
+                      border: "1px solid var(--accent)",
+                    }}>
+                      {chip.label}
+                      <span onClick={(e) => { e.stopPropagation(); chip.onRemove(); setPage(0); }}
+                        style={{ cursor: "pointer", fontSize: 13, lineHeight: 1, fontWeight: 700, opacity: 0.7 }}
+                        onMouseEnter={e => e.target.style.opacity = 1}
+                        onMouseLeave={e => e.target.style.opacity = 0.7}
+                      >×</span>
+                    </span>
+                  ))}
+                  <button onClick={clearAll} style={{
+                    background: "none", border: "none", color: "var(--red)", fontSize: 11,
+                    fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                    marginLeft: 4,
+                  }}>Clear all</button>
+                </div>
+              );
+            })()}
+
             {/* ═══ SECTION 1: Search Results — fills available space, scrolls internally ═══ */}
             <div style={{
               flex: 1, minHeight: 0, display: "flex", flexDirection: "column",
