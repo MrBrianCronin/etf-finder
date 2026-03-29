@@ -1,53 +1,122 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 
-// ─── Sample ETF Dataset ───
+// ─── ETF Dataset (derived from publicly available market data) ───
 const ETF_DATA = [
-  { ticker: "SPY", name: "SPDR S&P 500 ETF Trust", sector: "Broad Market", industry: "Large Cap Blend", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.09, aum: 515000, div_yield: 1.3, perf: { "1D": 0.4, "1W": 1.2, "1M": 3.1, "3M": 5.8, "6M": 9.2, "YTD": 12.1, "1Y": 22.4, "2Y": 38.1, "3Y": 42.5 }, tags: ["index","s&p 500","large cap","passive","broad market","core holding","retirement"] },
-  { ticker: "QQQ", name: "Invesco QQQ Trust", sector: "Technology", industry: "Large Cap Growth", asset_class: "Equity", geo: "US", provider: "Invesco", risk: "Moderately Aggressive", esg: false, expense: 0.20, aum: 250000, div_yield: 0.5, perf: { "1D": 0.6, "1W": 1.8, "1M": 4.2, "3M": 8.5, "6M": 14.1, "YTD": 18.3, "1Y": 30.2, "2Y": 55.0, "3Y": 48.2 }, tags: ["nasdaq","tech","growth","innovation","mega cap","ai","software"] },
-  { ticker: "VTI", name: "Vanguard Total Stock Market ETF", sector: "Broad Market", industry: "Total Market", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.03, aum: 380000, div_yield: 1.4, perf: { "1D": 0.3, "1W": 1.1, "1M": 2.9, "3M": 5.5, "6M": 8.8, "YTD": 11.5, "1Y": 21.0, "2Y": 35.8, "3Y": 40.1 }, tags: ["total market","index","diversified","core","passive","all cap","broad market"] },
-  { ticker: "VOO", name: "Vanguard S&P 500 ETF", sector: "Broad Market", industry: "Large Cap Blend", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.03, aum: 420000, div_yield: 1.3, perf: { "1D": 0.4, "1W": 1.2, "1M": 3.1, "3M": 5.9, "6M": 9.3, "YTD": 12.2, "1Y": 22.5, "2Y": 38.3, "3Y": 42.8 }, tags: ["s&p 500","index","passive","core holding","large cap","retirement","low cost"] },
-  { ticker: "IWM", name: "iShares Russell 2000 ETF", sector: "Broad Market", industry: "Small Cap Blend", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.19, aum: 62000, div_yield: 1.1, perf: { "1D": -0.2, "1W": 0.5, "1M": 1.8, "3M": 2.1, "6M": 3.5, "YTD": 5.2, "1Y": 12.8, "2Y": 20.3, "3Y": 15.6 }, tags: ["small cap","russell 2000","growth potential","volatile","domestic","value hunting"] },
-  { ticker: "ARKK", name: "ARK Innovation ETF", sector: "Technology", industry: "Disruptive Innovation", asset_class: "Equity", geo: "US", provider: "ARK Invest", risk: "Aggressive", esg: false, expense: 0.75, aum: 6800, div_yield: 0.0, perf: { "1D": 1.2, "1W": 3.5, "1M": 8.1, "3M": 12.4, "6M": -5.2, "YTD": 15.8, "1Y": -8.5, "2Y": -22.1, "3Y": -45.2 }, tags: ["innovation","disruptive","genomics","ai","fintech","autonomous","high risk","cathie wood"] },
-  { ticker: "VGT", name: "Vanguard Information Technology ETF", sector: "Technology", industry: "Information Technology", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Aggressive", esg: false, expense: 0.10, aum: 72000, div_yield: 0.6, perf: { "1D": 0.5, "1W": 1.6, "1M": 3.8, "3M": 7.8, "6M": 13.2, "YTD": 17.1, "1Y": 28.9, "2Y": 50.2, "3Y": 45.8 }, tags: ["tech","software","semiconductors","cloud","information technology","growth"] },
-  { ticker: "XLK", name: "Technology Select Sector SPDR", sector: "Technology", industry: "Information Technology", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.09, aum: 55000, div_yield: 0.7, perf: { "1D": 0.5, "1W": 1.5, "1M": 3.6, "3M": 7.5, "6M": 12.8, "YTD": 16.5, "1Y": 27.8, "2Y": 48.5, "3Y": 44.1 }, tags: ["tech","sector","spdr","information technology","large cap tech"] },
-  { ticker: "XLF", name: "Financial Select Sector SPDR", sector: "Financials", industry: "Diversified Financials", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.09, aum: 38000, div_yield: 1.5, perf: { "1D": 0.2, "1W": 0.8, "1M": 2.5, "3M": 4.8, "6M": 8.1, "YTD": 10.8, "1Y": 18.5, "2Y": 28.2, "3Y": 25.8 }, tags: ["financials","banks","insurance","sector","banking","interest rates"] },
-  { ticker: "XLE", name: "Energy Select Sector SPDR", sector: "Energy", industry: "Oil & Gas", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.09, aum: 35000, div_yield: 3.5, perf: { "1D": -0.8, "1W": -1.2, "1M": -3.5, "3M": -5.2, "6M": 2.1, "YTD": -8.5, "1Y": 5.2, "2Y": 18.5, "3Y": 85.2 }, tags: ["energy","oil","gas","commodities","dividends","cyclical"] },
-  { ticker: "XLV", name: "Health Care Select Sector SPDR", sector: "Healthcare", industry: "Diversified Healthcare", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.09, aum: 36000, div_yield: 1.4, perf: { "1D": 0.1, "1W": 0.6, "1M": 1.8, "3M": 3.2, "6M": 5.8, "YTD": 7.2, "1Y": 12.1, "2Y": 18.5, "3Y": 22.1 }, tags: ["healthcare","pharma","biotech","medical","defensive","stable"] },
-  { ticker: "XLU", name: "Utilities Select Sector SPDR", sector: "Utilities", industry: "Electric Utilities", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Conservative", esg: false, expense: 0.09, aum: 14000, div_yield: 3.1, perf: { "1D": 0.1, "1W": 0.3, "1M": 1.2, "3M": 2.8, "6M": 5.5, "YTD": 8.2, "1Y": 15.2, "2Y": 12.8, "3Y": 18.5 }, tags: ["utilities","dividends","defensive","income","stable","conservative","low volatility"] },
-  { ticker: "XLP", name: "Consumer Staples Select Sector SPDR", sector: "Consumer Staples", industry: "Consumer Products", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Conservative", esg: false, expense: 0.09, aum: 16000, div_yield: 2.6, perf: { "1D": 0.0, "1W": 0.2, "1M": 0.8, "3M": 2.1, "6M": 4.2, "YTD": 5.8, "1Y": 8.5, "2Y": 10.2, "3Y": 15.8 }, tags: ["consumer staples","defensive","dividends","food","household","stable","recession proof"] },
-  { ticker: "XLY", name: "Consumer Discretionary Select Sector SPDR", sector: "Consumer Discretionary", industry: "Retail & Consumer", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.09, aum: 18000, div_yield: 0.8, perf: { "1D": 0.3, "1W": 1.0, "1M": 2.8, "3M": 5.2, "6M": 8.5, "YTD": 11.2, "1Y": 20.1, "2Y": 32.5, "3Y": 28.8 }, tags: ["consumer discretionary","retail","amazon","tesla","spending","cyclical"] },
-  { ticker: "XLRE", name: "Real Estate Select Sector SPDR", sector: "Real Estate", industry: "REITs", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Conservative", esg: false, expense: 0.09, aum: 6200, div_yield: 3.4, perf: { "1D": 0.1, "1W": 0.4, "1M": 1.5, "3M": 3.1, "6M": 5.2, "YTD": 6.8, "1Y": 10.5, "2Y": 8.2, "3Y": 12.1 }, tags: ["real estate","reits","income","dividends","property","interest rate sensitive"] },
-  { ticker: "XLC", name: "Communication Services Select Sector SPDR", sector: "Communication Services", industry: "Media & Telecom", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.09, aum: 18500, div_yield: 0.7, perf: { "1D": 0.4, "1W": 1.3, "1M": 3.2, "3M": 6.8, "6M": 11.5, "YTD": 14.8, "1Y": 25.2, "2Y": 42.1, "3Y": 18.5 }, tags: ["communication","media","social media","telecom","meta","google","streaming"] },
-  { ticker: "XLI", name: "Industrial Select Sector SPDR", sector: "Industrials", industry: "Diversified Industrials", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.09, aum: 17500, div_yield: 1.3, perf: { "1D": 0.2, "1W": 0.7, "1M": 2.1, "3M": 4.5, "6M": 7.8, "YTD": 10.2, "1Y": 17.8, "2Y": 28.5, "3Y": 32.1 }, tags: ["industrials","manufacturing","infrastructure","defense","aerospace","transportation"] },
-  { ticker: "XLB", name: "Materials Select Sector SPDR", sector: "Materials", industry: "Chemicals & Mining", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.09, aum: 5800, div_yield: 1.8, perf: { "1D": -0.1, "1W": 0.3, "1M": 1.5, "3M": 2.8, "6M": 4.5, "YTD": 5.2, "1Y": 8.8, "2Y": 12.5, "3Y": 22.8 }, tags: ["materials","mining","chemicals","commodities","gold","copper","cyclical"] },
-  { ticker: "BND", name: "Vanguard Total Bond Market ETF", sector: "Fixed Income", industry: "Investment Grade Bonds", asset_class: "Fixed Income", geo: "US", provider: "Vanguard", risk: "Conservative", esg: false, expense: 0.03, aum: 105000, div_yield: 3.4, perf: { "1D": 0.0, "1W": 0.1, "1M": 0.5, "3M": 1.2, "6M": 2.1, "YTD": 2.8, "1Y": 4.5, "2Y": 2.8, "3Y": -5.2 }, tags: ["bonds","fixed income","conservative","income","safe","treasury","core bond","retirement"] },
-  { ticker: "AGG", name: "iShares Core US Aggregate Bond ETF", sector: "Fixed Income", industry: "Investment Grade Bonds", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Conservative", esg: false, expense: 0.03, aum: 98000, div_yield: 3.3, perf: { "1D": 0.0, "1W": 0.1, "1M": 0.4, "3M": 1.1, "6M": 2.0, "YTD": 2.7, "1Y": 4.3, "2Y": 2.5, "3Y": -5.5 }, tags: ["bonds","aggregate","fixed income","conservative","income","core bond"] },
-  { ticker: "TLT", name: "iShares 20+ Year Treasury Bond ETF", sector: "Fixed Income", industry: "Long-Term Treasury", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Moderately Conservative", esg: false, expense: 0.15, aum: 42000, div_yield: 3.8, perf: { "1D": 0.1, "1W": 0.3, "1M": 1.2, "3M": 2.5, "6M": -1.8, "YTD": 3.2, "1Y": 1.5, "2Y": -8.2, "3Y": -28.5 }, tags: ["treasury","long term bonds","interest rate","fixed income","government bonds","duration"] },
-  { ticker: "LQD", name: "iShares iBoxx $ Investment Grade Corp Bond ETF", sector: "Fixed Income", industry: "Corporate Bonds", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Moderately Conservative", esg: false, expense: 0.14, aum: 35000, div_yield: 4.2, perf: { "1D": 0.0, "1W": 0.2, "1M": 0.8, "3M": 1.8, "6M": 3.2, "YTD": 3.8, "1Y": 6.2, "2Y": 5.5, "3Y": -4.8 }, tags: ["corporate bonds","investment grade","income","fixed income","credit"] },
-  { ticker: "HYG", name: "iShares iBoxx $ High Yield Corp Bond ETF", sector: "Fixed Income", industry: "High Yield Bonds", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Moderate", esg: false, expense: 0.49, aum: 15000, div_yield: 5.8, perf: { "1D": 0.1, "1W": 0.3, "1M": 0.9, "3M": 2.2, "6M": 3.8, "YTD": 4.5, "1Y": 8.2, "2Y": 10.5, "3Y": 2.8 }, tags: ["high yield","junk bonds","income","corporate bonds","credit risk","higher income"] },
-  { ticker: "VEA", name: "Vanguard FTSE Developed Markets ETF", sector: "Broad Market", industry: "International Developed", asset_class: "Equity", geo: "International Developed", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.05, aum: 115000, div_yield: 3.1, perf: { "1D": 0.2, "1W": 0.8, "1M": 2.5, "3M": 4.2, "6M": 6.8, "YTD": 8.5, "1Y": 12.8, "2Y": 18.2, "3Y": 15.5 }, tags: ["international","developed markets","europe","japan","diversification","global"] },
-  { ticker: "VWO", name: "Vanguard FTSE Emerging Markets ETF", sector: "Broad Market", industry: "Emerging Markets", asset_class: "Equity", geo: "Emerging Markets", provider: "Vanguard", risk: "Aggressive", esg: false, expense: 0.08, aum: 78000, div_yield: 3.2, perf: { "1D": 0.3, "1W": 0.5, "1M": 1.8, "3M": 3.5, "6M": 5.2, "YTD": 6.8, "1Y": 10.2, "2Y": 8.5, "3Y": -2.8 }, tags: ["emerging markets","china","india","brazil","developing","international","frontier"] },
-  { ticker: "EFA", name: "iShares MSCI EAFE ETF", sector: "Broad Market", industry: "International Developed", asset_class: "Equity", geo: "International Developed", provider: "iShares", risk: "Moderate", esg: false, expense: 0.32, aum: 52000, div_yield: 3.0, perf: { "1D": 0.2, "1W": 0.7, "1M": 2.3, "3M": 4.0, "6M": 6.5, "YTD": 8.2, "1Y": 12.5, "2Y": 17.8, "3Y": 14.8 }, tags: ["international","eafe","europe","asia","developed","diversification"] },
-  { ticker: "VXUS", name: "Vanguard Total International Stock ETF", sector: "Broad Market", industry: "Total International", asset_class: "Equity", geo: "Global", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.07, aum: 68000, div_yield: 3.0, perf: { "1D": 0.2, "1W": 0.7, "1M": 2.2, "3M": 3.8, "6M": 6.2, "YTD": 7.8, "1Y": 11.8, "2Y": 15.5, "3Y": 10.2 }, tags: ["international","total international","global","diversification","ex-us"] },
-  { ticker: "GLD", name: "SPDR Gold Shares", sector: "Commodities", industry: "Precious Metals", asset_class: "Commodity", geo: "Global", provider: "State Street", risk: "Moderate", esg: false, expense: 0.40, aum: 62000, div_yield: 0.0, perf: { "1D": 0.5, "1W": 1.2, "1M": 3.8, "3M": 8.2, "6M": 12.5, "YTD": 15.2, "1Y": 22.8, "2Y": 28.5, "3Y": 25.2 }, tags: ["gold","precious metals","hedge","inflation","safe haven","commodities","store of value"] },
-  { ticker: "SLV", name: "iShares Silver Trust", sector: "Commodities", industry: "Precious Metals", asset_class: "Commodity", geo: "Global", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.50, aum: 11000, div_yield: 0.0, perf: { "1D": 0.8, "1W": 2.1, "1M": 5.2, "3M": 10.5, "6M": 15.8, "YTD": 18.2, "1Y": 28.5, "2Y": 22.1, "3Y": 18.8 }, tags: ["silver","precious metals","industrial metal","commodities","volatile","inflation hedge"] },
-  { ticker: "VNQ", name: "Vanguard Real Estate ETF", sector: "Real Estate", industry: "REITs", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Conservative", esg: false, expense: 0.12, aum: 32000, div_yield: 3.8, perf: { "1D": 0.1, "1W": 0.3, "1M": 1.2, "3M": 2.8, "6M": 4.8, "YTD": 6.2, "1Y": 9.8, "2Y": 7.5, "3Y": 10.8 }, tags: ["real estate","reits","income","dividends","property","interest rates"] },
-  { ticker: "SCHD", name: "Schwab US Dividend Equity ETF", sector: "Broad Market", industry: "Dividend Focus", asset_class: "Equity", geo: "US", provider: "Schwab", risk: "Moderately Conservative", esg: false, expense: 0.06, aum: 55000, div_yield: 3.5, perf: { "1D": 0.1, "1W": 0.5, "1M": 1.5, "3M": 3.2, "6M": 5.8, "YTD": 7.5, "1Y": 12.2, "2Y": 15.8, "3Y": 22.5 }, tags: ["dividends","income","quality","value","dividend growth","retirement income"] },
-  { ticker: "VIG", name: "Vanguard Dividend Appreciation ETF", sector: "Broad Market", industry: "Dividend Growth", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Conservative", esg: false, expense: 0.06, aum: 78000, div_yield: 1.8, perf: { "1D": 0.2, "1W": 0.6, "1M": 1.8, "3M": 3.8, "6M": 6.5, "YTD": 8.8, "1Y": 14.5, "2Y": 22.1, "3Y": 28.2 }, tags: ["dividend growth","quality","blue chip","appreciation","income growth","reliable"] },
-  { ticker: "JEPI", name: "JPMorgan Equity Premium Income ETF", sector: "Broad Market", industry: "Covered Call Strategy", asset_class: "Equity", geo: "US", provider: "JPMorgan", risk: "Moderately Conservative", esg: false, expense: 0.35, aum: 33000, div_yield: 7.5, perf: { "1D": 0.1, "1W": 0.4, "1M": 1.2, "3M": 2.5, "6M": 4.8, "YTD": 5.5, "1Y": 8.8, "2Y": 12.2, "3Y": 18.5 }, tags: ["income","covered call","options","premium income","monthly income","high yield equity"] },
-  { ticker: "ICLN", name: "iShares Global Clean Energy ETF", sector: "Energy", industry: "Clean Energy", asset_class: "Equity", geo: "Global", provider: "iShares", risk: "Aggressive", esg: true, expense: 0.40, aum: 2800, div_yield: 1.2, perf: { "1D": 0.3, "1W": 0.8, "1M": 2.5, "3M": 5.1, "6M": -2.8, "YTD": 3.2, "1Y": -5.8, "2Y": -18.5, "3Y": -42.1 }, tags: ["clean energy","solar","wind","renewable","esg","green","climate","sustainability"] },
-  { ticker: "ESGU", name: "iShares ESG Aware MSCI USA ETF", sector: "Broad Market", industry: "ESG Large Cap", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Moderate", esg: true, expense: 0.15, aum: 12500, div_yield: 1.2, perf: { "1D": 0.3, "1W": 1.1, "1M": 2.8, "3M": 5.5, "6M": 8.8, "YTD": 11.5, "1Y": 21.2, "2Y": 35.2, "3Y": 38.5 }, tags: ["esg","sustainable","responsible","socially responsible","environmental","governance"] },
-  { ticker: "SOXX", name: "iShares Semiconductor ETF", sector: "Technology", industry: "Semiconductors", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.35, aum: 12000, div_yield: 0.6, perf: { "1D": 0.8, "1W": 2.5, "1M": 5.8, "3M": 12.1, "6M": 18.5, "YTD": 22.8, "1Y": 38.5, "2Y": 62.1, "3Y": 52.8 }, tags: ["semiconductors","chips","ai","nvidia","amd","technology","ai infrastructure"] },
-  { ticker: "SMH", name: "VanEck Semiconductor ETF", sector: "Technology", industry: "Semiconductors", asset_class: "Equity", geo: "US", provider: "VanEck", risk: "Aggressive", esg: false, expense: 0.35, aum: 18000, div_yield: 0.5, perf: { "1D": 0.9, "1W": 2.6, "1M": 6.1, "3M": 12.8, "6M": 19.2, "YTD": 23.5, "1Y": 40.2, "2Y": 65.5, "3Y": 55.2 }, tags: ["semiconductors","chips","ai","nvidia","tsmc","technology","foundry"] },
-  { ticker: "IBB", name: "iShares Biotechnology ETF", sector: "Healthcare", industry: "Biotechnology", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.44, aum: 7200, div_yield: 0.2, perf: { "1D": 0.4, "1W": 1.2, "1M": 3.5, "3M": 5.8, "6M": 8.2, "YTD": 10.5, "1Y": 15.2, "2Y": 12.8, "3Y": -5.8 }, tags: ["biotech","biotechnology","healthcare","pharma","drug development","genomics","medical"] },
-  { ticker: "HACK", name: "ETFMG Prime Cyber Security ETF", sector: "Technology", industry: "Cybersecurity", asset_class: "Equity", geo: "US", provider: "ETFMG", risk: "Moderately Aggressive", esg: false, expense: 0.60, aum: 1800, div_yield: 0.1, perf: { "1D": 0.4, "1W": 1.3, "1M": 3.2, "3M": 6.5, "6M": 10.8, "YTD": 14.2, "1Y": 22.5, "2Y": 32.8, "3Y": 28.5 }, tags: ["cybersecurity","security","hacking","data protection","technology","defense","cloud security"] },
-  { ticker: "BOTZ", name: "Global X Robotics & AI ETF", sector: "Technology", industry: "Robotics & AI", asset_class: "Equity", geo: "Global", provider: "Global X", risk: "Aggressive", esg: false, expense: 0.68, aum: 2500, div_yield: 0.2, perf: { "1D": 0.6, "1W": 1.8, "1M": 4.5, "3M": 9.2, "6M": 14.8, "YTD": 18.5, "1Y": 28.2, "2Y": 35.8, "3Y": 22.5 }, tags: ["robotics","ai","artificial intelligence","automation","machine learning","future tech"] },
-  { ticker: "KWEB", name: "KraneShares CSI China Internet ETF", sector: "Technology", industry: "China Internet", asset_class: "Equity", geo: "Emerging Markets", provider: "KraneShares", risk: "Aggressive", esg: false, expense: 0.69, aum: 5200, div_yield: 0.5, perf: { "1D": 1.2, "1W": 3.5, "1M": 8.2, "3M": 15.5, "6M": 22.1, "YTD": 18.8, "1Y": 25.2, "2Y": -5.8, "3Y": -35.2 }, tags: ["china","internet","alibaba","tencent","emerging","asia","chinese tech"] },
-  { ticker: "SHY", name: "iShares 1-3 Year Treasury Bond ETF", sector: "Fixed Income", industry: "Short-Term Treasury", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Conservative", esg: false, expense: 0.15, aum: 28000, div_yield: 3.8, perf: { "1D": 0.0, "1W": 0.0, "1M": 0.2, "3M": 0.8, "6M": 1.5, "YTD": 1.8, "1Y": 4.2, "2Y": 6.5, "3Y": 2.8 }, tags: ["short term","treasury","safe","conservative","cash alternative","low risk","money market"] },
-  { ticker: "TIP", name: "iShares TIPS Bond ETF", sector: "Fixed Income", industry: "Inflation Protected", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Conservative", esg: false, expense: 0.19, aum: 19000, div_yield: 4.5, perf: { "1D": 0.0, "1W": 0.1, "1M": 0.5, "3M": 1.2, "6M": 2.2, "YTD": 2.8, "1Y": 4.8, "2Y": 3.2, "3Y": -3.8 }, tags: ["tips","inflation","inflation protection","treasury","real return","conservative"] },
-  { ticker: "DBA", name: "Invesco DB Agriculture Fund", sector: "Commodities", industry: "Agriculture", asset_class: "Commodity", geo: "Global", provider: "Invesco", risk: "Moderately Aggressive", esg: false, expense: 0.85, aum: 820, div_yield: 0.0, perf: { "1D": -0.2, "1W": 0.5, "1M": 1.8, "3M": 3.2, "6M": 5.5, "YTD": 4.8, "1Y": 8.2, "2Y": 5.5, "3Y": 18.5 }, tags: ["agriculture","farming","food","commodities","corn","wheat","soybeans","crop"] },
-  { ticker: "IBIT", name: "iShares Bitcoin Trust ETF", sector: "Digital Assets", industry: "Cryptocurrency", asset_class: "Crypto", geo: "Global", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.25, aum: 48000, div_yield: 0.0, perf: { "1D": 2.5, "1W": 8.2, "1M": 15.5, "3M": 28.2, "6M": 45.8, "YTD": 52.1, "1Y": 120.5, "2Y": 180.2, "3Y": 85.5 }, tags: ["bitcoin","crypto","cryptocurrency","digital assets","blockchain","btc","web3"] },
-  { ticker: "ETHE", name: "iShares Ethereum Trust ETF", sector: "Digital Assets", industry: "Cryptocurrency", asset_class: "Crypto", geo: "Global", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.25, aum: 8500, div_yield: 0.0, perf: { "1D": 3.2, "1W": 10.5, "1M": 18.2, "3M": 25.5, "6M": 35.2, "YTD": 42.8, "1Y": 85.2, "2Y": 110.5, "3Y": 45.2 }, tags: ["ethereum","crypto","cryptocurrency","defi","smart contracts","blockchain","eth","web3"] },
+  { ticker: "SPY", name: "State Street SPDR S&P 500 ETF Trust", sector: "Broad Market", industry: "Large Cap Blend", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.09, aum: 698270, div_yield: 1.1, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -3.2, "1M": -7.3, "3M": -7.9, "6M": -3.6, "YTD": -6.9, "1Y": 13.1, "2Y": 25.0, "3Y": 66.6}, tags: ["broad market", "large cap blend"] },
+  { ticker: "VOO", name: "Vanguard S&P 500 ETF", sector: "Broad Market", industry: "Large Cap Blend", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.03, aum: 1512902, div_yield: 1.1, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -3.6, "1M": -7.6, "3M": -8.2, "6M": -3.9, "YTD": -7.2, "1Y": 12.8, "2Y": 24.7, "3Y": 66.4}, tags: ["broad market", "large cap blend"] },
+  { ticker: "VTI", name: "Vanguard Total Stock Market Index Fund ETF Shares", sector: "Broad Market", industry: "Total Market", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.03, aum: 2088925, div_yield: 1.1, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -3.4, "1M": -7.6, "3M": -7.8, "6M": -3.8, "YTD": -6.9, "1Y": 13.2, "2Y": 24.1, "3Y": 64.8}, tags: ["broad market", "total market"] },
+  { ticker: "QQQ", name: "Invesco QQQ Trust", sector: "Technology", industry: "Large Cap Growth", asset_class: "Equity", geo: "US", provider: "Invesco", risk: "Moderately Aggressive", esg: false, expense: 0.2, aum: 395033, div_yield: 0.5, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -4.3, "1M": -7.4, "3M": -9.8, "6M": -5.5, "YTD": -8.2, "1Y": 17.2, "2Y": 27.7, "3Y": 86.2}, tags: ["growth", "technology", "large cap growth"] },
+  { ticker: "IWM", name: "iShares Russell 2000 ETF", sector: "Broad Market", industry: "Small Cap Blend", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.19, aum: 73953, div_yield: 1.0, cap: "Small", style: "Blend", perf: {"1D": 0.0, "1W": -1.8, "1M": -6.8, "3M": -3.1, "6M": 1.2, "YTD": -2.1, "1Y": 20.1, "2Y": 20.9, "3Y": 45.3}, tags: ["broad market", "small cap blend"] },
+  { ticker: "IWF", name: "iShares Russell 1000 Growth ETF", sector: "Broad Market", industry: "Large Cap Growth", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Moderately Aggressive", esg: false, expense: 0.19, aum: 116507, div_yield: 0.4, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -4.9, "1M": -8.2, "3M": -14.0, "6M": -11.0, "YTD": -12.4, "1Y": 12.0, "2Y": 23.3, "3Y": 78.3}, tags: ["growth", "broad market", "large cap growth"] },
+  { ticker: "IWD", name: "iShares Russell 1000 Value ETF", sector: "Broad Market", industry: "Large Cap Value", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Moderate", esg: false, expense: 0.19, aum: 71033, div_yield: 1.6, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": -1.4, "1M": -6.5, "3M": -0.8, "6M": 4.4, "YTD": -0.6, "1Y": 13.2, "2Y": 23.9, "3Y": 50.5}, tags: ["value", "broad market", "large cap value"] },
+  { ticker: "VTV", name: "Vanguard Value Index Fund ETF Shares", sector: "Broad Market", industry: "Large Cap Value", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.04, aum: 238547, div_yield: 1.9, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": -1.3, "1M": -6.7, "3M": 0.3, "6M": 4.7, "YTD": 0.3, "1Y": 13.6, "2Y": 25.5, "3Y": 53.4}, tags: ["value", "broad market", "large cap value"] },
+  { ticker: "VUG", name: "Vanguard Growth Index Fund ETF Shares", sector: "Broad Market", industry: "Large Cap Growth", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Aggressive", esg: false, expense: 0.04, aum: 335907, div_yield: 0.4, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -5.4, "1M": -8.4, "3M": -14.7, "6M": -11.2, "YTD": -13.1, "1Y": 11.3, "2Y": 23.4, "3Y": 79.3}, tags: ["growth", "broad market", "large cap growth"] },
+  { ticker: "VO", name: "Vanguard Mid-Cap Index Fund ETF Shares", sector: "Broad Market", industry: "Mid Cap Blend", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Aggressive", esg: false, expense: 0.04, aum: 210340, div_yield: 1.4, cap: "Mid", style: "Blend", perf: {"1D": 0.0, "1W": -2.0, "1M": -7.6, "3M": -4.0, "6M": -2.6, "YTD": -3.4, "1Y": 9.6, "2Y": 18.2, "3Y": 45.5}, tags: ["broad market", "mid cap blend"] },
+  { ticker: "VB", name: "Vanguard Small-Cap Index Fund ETF Shares", sector: "Broad Market", industry: "Small Cap Blend", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Aggressive", esg: false, expense: 0.05, aum: 173791, div_yield: 1.2, cap: "Small", style: "Blend", perf: {"1D": 0.0, "1W": -2.3, "1M": -7.5, "3M": -2.5, "6M": 1.2, "YTD": -2.0, "1Y": 14.5, "2Y": 17.2, "3Y": 45.7}, tags: ["broad market", "small cap blend"] },
+  { ticker: "MDY", name: "State Street SPDR S&P MIDCAP 400 ETF Trust", sector: "Broad Market", industry: "Mid Cap Blend", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.23, aum: 25646, div_yield: 1.1, cap: "Mid", style: "Blend", perf: {"1D": 0.0, "1W": -1.4, "1M": -7.3, "3M": -1.6, "6M": 1.8, "YTD": -1.0, "1Y": 12.7, "2Y": 13.4, "3Y": 41.2}, tags: ["broad market", "mid cap blend"] },
+  { ticker: "IJR", name: "iShares Core S&P Small-Cap ETF", sector: "Broad Market", industry: "Small Cap Blend", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.06, aum: 95757, div_yield: 1.3, cap: "Small", style: "Blend", perf: {"1D": 0.0, "1W": -0.9, "1M": -6.0, "3M": -1.0, "6M": 3.4, "YTD": 0.5, "1Y": 16.1, "2Y": 17.1, "3Y": 35.4}, tags: ["broad market", "small cap blend"] },
+  { ticker: "RSP", name: "Invesco S&P 500 Equal Weight ETF", sector: "Broad Market", industry: "Equal Weight", asset_class: "Equity", geo: "US", provider: "Invesco", risk: "Moderate", esg: false, expense: 0.2, aum: 90677, div_yield: 1.5, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -1.7, "1M": -8.1, "3M": -2.8, "6M": 0.3, "YTD": -2.3, "1Y": 9.4, "2Y": 16.6, "3Y": 41.1}, tags: ["broad market", "equal weight"] },
+  { ticker: "SPLG", name: "State Street SPDR Portfolio S&P 500 ETF", sector: "Broad Market", industry: "Large Cap Blend", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.02, aum: 97328, div_yield: 1.1, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -3.2, "1M": -7.3, "3M": -7.9, "6M": -3.0, "YTD": -6.9, "1Y": 12.9, "2Y": 24.8, "3Y": 66.9}, tags: ["broad market", "large cap blend"] },
+  { ticker: "SCHX", name: "Schwab U.S. Large-Cap ETF", sector: "Broad Market", industry: "Large Cap Blend", asset_class: "Equity", geo: "US", provider: "Schwab", risk: "Moderate", esg: false, expense: 0.03, aum: 64140, div_yield: 1.1, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -3.4, "1M": -7.6, "3M": -8.2, "6M": -4.2, "YTD": -7.3, "1Y": 12.7, "2Y": 24.2, "3Y": 66.5}, tags: ["broad market", "large cap blend"] },
+  { ticker: "SCHA", name: "Schwab U.S. Small-Cap ETF", sector: "Broad Market", industry: "Small Cap Blend", asset_class: "Equity", geo: "US", provider: "Schwab", risk: "Aggressive", esg: false, expense: 0.04, aum: 20749, div_yield: 1.2, cap: "Small", style: "Blend", perf: {"1D": 0.0, "1W": -2.0, "1M": -6.7, "3M": -2.2, "6M": 2.6, "YTD": -1.2, "1Y": 19.9, "2Y": 21.4, "3Y": 46.2}, tags: ["broad market", "small cap blend"] },
+  { ticker: "SCHB", name: "Schwab U.S. Broad Market ETF", sector: "Broad Market", industry: "Total Market", asset_class: "Equity", geo: "US", provider: "Schwab", risk: "Moderate", esg: false, expense: 0.03, aum: 38703, div_yield: 1.1, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -3.4, "1M": -7.5, "3M": -7.8, "6M": -3.8, "YTD": -6.9, "1Y": 13.1, "2Y": 24.0, "3Y": 64.9}, tags: ["broad market", "total market"] },
+  { ticker: "XLK", name: "State Street Technology Select Sector SPDR ETF", sector: "Technology", industry: "Information Technology", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.09, aum: 87686, div_yield: 0.6, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -5.1, "1M": -6.4, "3M": -11.3, "6M": -6.7, "YTD": -10.0, "1Y": 23.4, "2Y": 26.0, "3Y": 83.8}, tags: ["technology", "information technology"] },
+  { ticker: "VGT", name: "Vanguard Information Technology Index Fund ETF Shares", sector: "Technology", industry: "Information Technology", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Aggressive", esg: false, expense: 0.1, aum: 126509, div_yield: 0.4, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -4.9, "1M": -6.3, "3M": -11.2, "6M": -7.7, "YTD": -9.9, "1Y": 22.6, "2Y": 30.5, "3Y": 88.1}, tags: ["technology", "information technology"] },
+  { ticker: "SOXX", name: "iShares Semiconductor ETF", sector: "Technology", industry: "Semiconductors", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.35, aum: 21675, div_yield: 0.5, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -3.9, "1M": -8.1, "3M": 5.8, "6M": 20.6, "YTD": 3.2, "1Y": 67.3, "2Y": 45.9, "3Y": 135.2}, tags: ["technology", "semiconductors"] },
+  { ticker: "SMH", name: "VanEck Semiconductor ETF", sector: "Technology", industry: "Semiconductors", asset_class: "Equity", geo: "US", provider: "VanEck", risk: "Aggressive", esg: false, expense: 0.35, aum: 46250, div_yield: 0.3, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -4.4, "1M": -7.9, "3M": 2.3, "6M": 16.7, "YTD": 0.3, "1Y": 72.4, "2Y": 66.1, "3Y": 203.6}, tags: ["technology", "semiconductors"] },
+  { ticker: "ARKK", name: "ARK Innovation ETF", sector: "Technology", industry: "Disruptive Innovation", asset_class: "Equity", geo: "US", provider: "ARK Invest", risk: "Aggressive", esg: false, expense: 0.75, aum: 6516, div_yield: 0.0, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -8.9, "1M": -11.4, "3M": -18.9, "6M": -22.2, "YTD": -17.5, "1Y": 27.3, "2Y": 28.6, "3Y": 75.2}, tags: ["technology", "disruptive innovation"] },
+  { ticker: "HACK", name: "Amplify Cybersecurity ETF", sector: "Technology", industry: "Cybersecurity", asset_class: "Equity", geo: "US", provider: "Amplify", risk: "Moderately Aggressive", esg: false, expense: 0.6, aum: 1845, div_yield: 0.1, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -7.0, "1M": -0.7, "3M": -11.3, "6M": -16.2, "YTD": -8.4, "1Y": -1.5, "2Y": 14.0, "3Y": 58.2}, tags: ["cybersecurity", "technology"] },
+  { ticker: "BOTZ", name: "Global X Robotics & Artificial Intelligence ETF", sector: "Technology", industry: "Robotics & AI", asset_class: "Equity", geo: "Global", provider: "Global X", risk: "Aggressive", esg: false, expense: 0.68, aum: 3537, div_yield: 0.6, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -5.2, "1M": -16.8, "3M": -10.9, "6M": -6.5, "YTD": -11.6, "1Y": 9.4, "2Y": 2.5, "3Y": 34.6}, tags: ["technology", "global", "robotics & ai"] },
+  { ticker: "IGV", name: "iShares Expanded Tech-Software Sector ETF", sector: "Technology", industry: "Software", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Moderately Aggressive", esg: false, expense: 0.4, aum: 9197, div_yield: 0.0, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -8.9, "1M": -5.7, "3M": -28.9, "6M": -33.1, "YTD": -25.1, "1Y": -16.9, "2Y": -10.3, "3Y": 32.5}, tags: ["software", "technology"] },
+  { ticker: "SKYY", name: "First Trust Cloud Computing ETF", sector: "Technology", industry: "Cloud Computing", asset_class: "Equity", geo: "US", provider: "First Trust", risk: "Aggressive", esg: false, expense: 0.6, aum: 2408, div_yield: 0.0, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -6.9, "1M": -3.3, "3M": -19.9, "6M": -21.2, "YTD": -17.0, "1Y": -0.6, "2Y": 10.6, "3Y": 67.5}, tags: ["technology", "cloud computing"] },
+  { ticker: "WCLD", name: "WisdomTree Cloud Computing Fund", sector: "Technology", industry: "Cloud Computing", asset_class: "Equity", geo: "US", provider: "WisdomTree", risk: "Aggressive", esg: false, expense: 0.45, aum: 224, div_yield: 0.0, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -8.1, "1M": -4.0, "3M": -26.5, "6M": -27.1, "YTD": -22.6, "1Y": -22.8, "2Y": -24.2, "3Y": -5.3}, tags: ["technology", "cloud computing"] },
+  { ticker: "XLV", name: "State Street Health Care Select Sector SPDR ETF", sector: "Healthcare", industry: "Diversified Healthcare", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.09, aum: 43115, div_yield: 1.6, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -1.0, "1M": -10.6, "3M": -8.2, "6M": 6.2, "YTD": -7.9, "1Y": 0.2, "2Y": 1.6, "3Y": 18.1}, tags: ["healthcare", "diversified healthcare"] },
+  { ticker: "VHT", name: "Vanguard Health Care Index Fund ETF Shares", sector: "Healthcare", industry: "Diversified Healthcare", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.1, aum: 20252, div_yield: 1.6, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -1.5, "1M": -10.2, "3M": -8.7, "6M": 5.4, "YTD": -8.1, "1Y": 1.9, "2Y": 2.8, "3Y": 18.5}, tags: ["healthcare", "diversified healthcare"] },
+  { ticker: "IBB", name: "iShares Biotechnology ETF", sector: "Healthcare", industry: "Biotechnology", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.44, aum: 8784, div_yield: 0.2, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -1.4, "1M": -8.5, "3M": -6.7, "6M": 14.0, "YTD": -5.0, "1Y": 22.2, "2Y": 18.5, "3Y": 28.3}, tags: ["healthcare", "biotechnology"] },
+  { ticker: "XBI", name: "State Street SPDR S&P Biotech ETF", sector: "Healthcare", industry: "Biotechnology", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Aggressive", esg: false, expense: 0.35, aum: 8056, div_yield: 0.3, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -1.7, "1M": -6.1, "3M": -4.3, "6M": 22.5, "YTD": -1.6, "1Y": 40.3, "2Y": 29.7, "3Y": 61.5}, tags: ["healthcare", "biotechnology"] },
+  { ticker: "ARKG", name: "ARK Genomic Revolution ETF", sector: "Healthcare", industry: "Genomics", asset_class: "Equity", geo: "US", provider: "ARK Invest", risk: "Aggressive", esg: false, expense: 0.75, aum: 1296, div_yield: 0.0, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -6.1, "1M": -16.6, "3M": -15.7, "6M": -7.1, "YTD": -14.3, "1Y": 12.5, "2Y": -11.2, "3Y": -10.7}, tags: ["healthcare", "genomics"] },
+  { ticker: "XLF", name: "State Street Financial Select Sector SPDR ETF", sector: "Financials", industry: "Diversified Financials", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.09, aum: 49680, div_yield: 1.4, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": -3.0, "1M": -7.0, "3M": -14.0, "6M": -10.9, "YTD": -13.0, "1Y": -3.7, "2Y": 18.9, "3Y": 58.9}, tags: ["diversified financials", "financials"] },
+  { ticker: "VFH", name: "Vanguard Financials Index Fund ETF Shares", sector: "Financials", industry: "Diversified Financials", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.1, aum: 13887, div_yield: 1.7, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": -3.1, "1M": -6.8, "3M": -13.8, "6M": -10.6, "YTD": -12.7, "1Y": -1.7, "2Y": 20.1, "3Y": 62.0}, tags: ["diversified financials", "financials"] },
+  { ticker: "KBE", name: "State Street SPDR S&P Bank ETF", sector: "Financials", industry: "Banking", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.35, aum: 1350, div_yield: 2.5, cap: "Mid", style: "Value", perf: {"1D": 0.0, "1W": -1.0, "1M": -5.2, "3M": -7.0, "6M": -3.5, "YTD": -5.4, "1Y": 10.1, "2Y": 33.2, "3Y": 70.6}, tags: ["banking", "financials"] },
+  { ticker: "KRE", name: "State Street SPDR S&P Regional Banking ETF", sector: "Financials", industry: "Regional Banking", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.35, aum: 3919, div_yield: 2.4, cap: "Mid", style: "Value", perf: {"1D": 0.0, "1W": -0.7, "1M": -5.1, "3M": -4.7, "6M": -0.7, "YTD": -2.9, "1Y": 12.3, "2Y": 36.9, "3Y": 56.8}, tags: ["regional banking", "financials"] },
+  { ticker: "XLE", name: "State Street Energy Select Sector SPDR ETF", sector: "Energy", industry: "Oil & Gas", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.09, aum: 37876, div_yield: 2.6, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": 4.9, "1M": 11.9, "3M": 41.5, "6M": 37.2, "YTD": 37.0, "1Y": 38.1, "2Y": 42.1, "3Y": 69.7}, tags: ["energy", "oil & gas"] },
+  { ticker: "VDE", name: "Vanguard Energy Index Fund ETF Shares", sector: "Energy", industry: "Diversified Energy", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Aggressive", esg: false, expense: 0.1, aum: 11325, div_yield: 2.5, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": 4.4, "1M": 12.3, "3M": 42.1, "6M": 37.6, "YTD": 37.5, "1Y": 40.5, "2Y": 43.9, "3Y": 73.0}, tags: ["diversified energy", "energy"] },
+  { ticker: "XOP", name: "State Street SPDR S&P Oil & Gas Exploration & Production ETF", sector: "Energy", industry: "Oil & Gas Exploration", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.35, aum: 2690, div_yield: 2.1, cap: "Mid", style: "Value", perf: {"1D": 0.0, "1W": 7.6, "1M": 22.4, "3M": 50.6, "6M": 38.1, "YTD": 45.9, "1Y": 45.6, "2Y": 29.1, "3Y": 61.6}, tags: ["oil & gas exploration", "energy"] },
+  { ticker: "OIH", name: "VanEck Oil Services ETF", sector: "Energy", industry: "Oil Services", asset_class: "Equity", geo: "US", provider: "VanEck", risk: "Moderately Aggressive", esg: false, expense: 0.35, aum: 2578, div_yield: 1.2, cap: "Mid", style: "Value", perf: {"1D": 0.0, "1W": 4.4, "1M": 4.8, "3M": 47.8, "6M": 58.0, "YTD": 40.6, "1Y": 59.9, "2Y": 29.3, "3Y": 59.3}, tags: ["oil services", "energy"] },
+  { ticker: "ICLN", name: "iShares Global Clean Energy ETF", sector: "Energy", industry: "Clean Energy", asset_class: "Equity", geo: "Global", provider: "iShares", risk: "Aggressive", esg: true, expense: 0.4, aum: 2122, div_yield: 1.5, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -1.8, "1M": -2.0, "3M": 7.4, "6M": 18.3, "YTD": 4.4, "1Y": 57.7, "2Y": 36.2, "3Y": -0.2}, tags: ["clean energy", "energy", "sustainable", "global", "esg"] },
+  { ticker: "TAN", name: "Invesco Solar ETF", sector: "Energy", industry: "Solar", asset_class: "Equity", geo: "US", provider: "Invesco", risk: "Aggressive", esg: true, expense: 0.5, aum: 1571, div_yield: 0.0, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -0.9, "1M": -0.9, "3M": 7.3, "6M": 25.6, "YTD": 5.7, "1Y": 74.4, "2Y": 26.1, "3Y": -24.4}, tags: ["sustainable", "esg", "energy", "solar"] },
+  { ticker: "QCLN", name: "First Trust NASDAQ Clean Edge Green Energy Index Fund", sector: "Energy", industry: "Clean Energy", asset_class: "Equity", geo: "US", provider: "First Trust", risk: "Aggressive", esg: true, expense: 0.58, aum: 576, div_yield: 0.2, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -2.2, "1M": -5.9, "3M": -1.8, "6M": 8.6, "YTD": -2.0, "1Y": 53.7, "2Y": 38.6, "3Y": -5.0}, tags: ["sustainable", "clean energy", "esg", "energy"] },
+  { ticker: "XLY", name: "State Street Consumer Discretionary Select Sector SPDR ETF", sector: "Consumer Discretionary", industry: "Retail & Consumer", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.09, aum: 22738, div_yield: 0.8, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -4.0, "1M": -9.6, "3M": -13.4, "6M": -11.7, "YTD": -10.7, "1Y": 4.5, "2Y": 17.8, "3Y": 52.5}, tags: ["retail & consumer", "consumer discretionary"] },
+  { ticker: "XLP", name: "State Street Consumer Staples Select Sector SPDR ETF", sector: "Consumer Staples", industry: "Consumer Products", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Conservative", esg: false, expense: 0.09, aum: 17557, div_yield: 2.4, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": 0.7, "1M": -9.1, "3M": 4.5, "6M": 5.7, "YTD": 5.3, "1Y": 3.4, "2Y": 13.7, "3Y": 20.1}, tags: ["consumer products", "consumer staples"] },
+  { ticker: "VCR", name: "Vanguard Consumer Discretionary Index Fund ETF Shares", sector: "Consumer Discretionary", industry: "Diversified Consumer", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Aggressive", esg: false, expense: 0.1, aum: 6681, div_yield: 0.8, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -4.2, "1M": -9.4, "3M": -13.5, "6M": -12.2, "YTD": -11.1, "1Y": 4.1, "2Y": 12.4, "3Y": 48.3}, tags: ["consumer discretionary", "diversified consumer"] },
+  { ticker: "VDC", name: "Vanguard Consumer Staples Index Fund ETF Shares", sector: "Consumer Staples", industry: "Diversified Staples", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Conservative", esg: false, expense: 0.1, aum: 9866, div_yield: 1.9, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": 0.3, "1M": -8.6, "3M": 4.8, "6M": 5.5, "YTD": 5.8, "1Y": 4.7, "2Y": 15.3, "3Y": 25.4}, tags: ["consumer staples", "diversified staples"] },
+  { ticker: "XLI", name: "State Street Industrial Select Sector SPDR ETF", sector: "Industrials", industry: "Diversified Industrials", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.09, aum: 31647, div_yield: 1.1, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -2.4, "1M": -10.1, "3M": 1.3, "6M": 4.7, "YTD": 0.8, "1Y": 21.1, "2Y": 31.3, "3Y": 69.0}, tags: ["industrials", "diversified industrials"] },
+  { ticker: "VIS", name: "Vanguard Industrials Index Fund ETF Shares", sector: "Industrials", industry: "Diversified Industrials", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.1, aum: 8128, div_yield: 0.9, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -2.6, "1M": -10.1, "3M": 1.2, "6M": 5.2, "YTD": 0.9, "1Y": 23.0, "2Y": 30.4, "3Y": 72.0}, tags: ["industrials", "diversified industrials"] },
+  { ticker: "XLB", name: "State Street Materials Select Sector SPDR ETF", sector: "Materials", industry: "Chemicals & Mining", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Aggressive", esg: false, expense: 0.09, aum: 7246, div_yield: 1.6, cap: "Mid", style: "Blend", perf: {"1D": 0.0, "1W": 2.9, "1M": -8.4, "3M": 6.1, "6M": 10.7, "YTD": 6.0, "1Y": 14.6, "2Y": 10.7, "3Y": 32.8}, tags: ["chemicals & mining", "materials"] },
+  { ticker: "VAW", name: "Vanguard Materials Index Fund ETF Shares", sector: "Materials", industry: "Diversified Materials", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Aggressive", esg: false, expense: 0.1, aum: 4733, div_yield: 1.3, cap: "Mid", style: "Blend", perf: {"1D": 0.0, "1W": 2.1, "1M": -10.0, "3M": 3.8, "6M": 8.9, "YTD": 4.2, "1Y": 16.4, "2Y": 12.7, "3Y": 33.9}, tags: ["diversified materials", "materials"] },
+  { ticker: "XLU", name: "State Street Utilities Select Sector SPDR ETF", sector: "Utilities", industry: "Electric Utilities", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Conservative", esg: false, expense: 0.09, aum: 24357, div_yield: 2.4, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": 1.8, "1M": -4.5, "3M": 6.6, "6M": 5.8, "YTD": 5.6, "1Y": 20.3, "2Y": 49.6, "3Y": 50.5}, tags: ["electric utilities", "utilities"] },
+  { ticker: "VPU", name: "Vanguard Utilities Index Fund ETF Shares", sector: "Utilities", industry: "Diversified Utilities", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Conservative", esg: false, expense: 0.1, aum: 11029, div_yield: 2.5, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": 1.1, "1M": -4.4, "3M": 6.1, "6M": 5.4, "YTD": 5.2, "1Y": 19.8, "2Y": 48.7, "3Y": 49.3}, tags: ["utilities", "diversified utilities"] },
+  { ticker: "XLRE", name: "State Street Real Estate Select Sector SPDR ETF", sector: "Real Estate", industry: "REITs", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderately Conservative", esg: false, expense: 0.09, aum: 7706, div_yield: 3.2, cap: "Mid", style: "Value", perf: {"1D": 0.0, "1W": -1.5, "1M": -8.7, "3M": -1.3, "6M": -3.4, "YTD": -0.9, "1Y": -0.7, "2Y": 10.6, "3Y": 24.9}, tags: ["dividends", "real estate", "reits"] },
+  { ticker: "VNQ", name: "Vanguard Real Estate Index Fund ETF Shares", sector: "Real Estate", industry: "REITs", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Conservative", esg: false, expense: 0.12, aum: 69606, div_yield: 3.6, cap: "Mid", style: "Value", perf: {"1D": 0.0, "1W": -2.7, "1M": -9.1, "3M": -2.1, "6M": -3.5, "YTD": -1.7, "1Y": -0.4, "2Y": 10.9, "3Y": 23.8}, tags: ["dividends", "real estate", "reits"] },
+  { ticker: "VNQI", name: "Vanguard Global ex-U.S. Real Estate Index Fund ETF Shares", sector: "Real Estate", industry: "International REITs", asset_class: "Equity", geo: "Global", provider: "Vanguard", risk: "Moderately Conservative", esg: false, expense: 0.12, aum: 4241, div_yield: 4.2, cap: "Mid", style: "Value", perf: {"1D": 0.0, "1W": -3.0, "1M": -14.7, "3M": -6.2, "6M": -4.2, "YTD": -6.0, "1Y": 10.7, "2Y": 14.2, "3Y": 24.4}, tags: ["dividends", "global", "real estate", "international reits"] },
+  { ticker: "XLC", name: "State Street Communication Services Select Sector SPDR ETF", sector: "Communication Services", industry: "Media & Telecom", asset_class: "Equity", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.09, aum: 27164, div_yield: 1.1, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -5.0, "1M": -9.3, "3M": -9.3, "6M": -9.1, "YTD": -8.4, "1Y": 9.5, "2Y": 34.0, "3Y": 97.3}, tags: ["media & telecom", "communication services"] },
+  { ticker: "VOX", name: "Vanguard Communication Services Index Fund ETF Shares", sector: "Communication Services", industry: "Diversified Telecom", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.1, aum: 6323, div_yield: 1.0, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -6.3, "1M": -10.1, "3M": -10.9, "6M": -8.0, "YTD": -10.5, "1Y": 14.0, "2Y": 34.4, "3Y": 91.3}, tags: ["diversified telecom", "communication services"] },
+  { ticker: "BND", name: "Vanguard Total Bond Market Index Fund", sector: "Fixed Income", industry: "Investment Grade Bonds", asset_class: "Fixed Income", geo: "US", provider: "Vanguard", risk: "Conservative", esg: false, expense: 0.03, aum: 395346, div_yield: 3.8, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.5, "1M": -2.4, "3M": -0.8, "6M": 0.4, "YTD": -0.6, "1Y": 4.3, "2Y": 8.9, "3Y": 11.2}, tags: ["bonds", "dividends", "investment grade bonds", "fixed income"] },
+  { ticker: "AGG", name: "iShares Core U.S. Aggregate Bond ETF", sector: "Fixed Income", industry: "Investment Grade Bonds", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Conservative", esg: false, expense: 0.03, aum: 141223, div_yield: 3.8, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.5, "1M": -2.5, "3M": -0.9, "6M": 0.4, "YTD": -0.7, "1Y": 4.4, "2Y": 9.0, "3Y": 11.1}, tags: ["bonds", "dividends", "investment grade bonds", "fixed income"] },
+  { ticker: "TLT", name: "iShares 20+ Year Treasury Bond ETF", sector: "Fixed Income", industry: "Long-Term Treasury", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Moderately Conservative", esg: false, expense: 0.15, aum: 45429, div_yield: 4.3, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.9, "1M": -5.4, "3M": -1.7, "6M": -1.6, "YTD": -0.9, "1Y": 0.7, "2Y": -0.3, "3Y": -7.6}, tags: ["dividends", "bonds", "long-term treasury", "fixed income"] },
+  { ticker: "IEF", name: "iShares 7-10 Year Treasury Bond ETF", sector: "Fixed Income", industry: "Intermediate Treasury", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Moderately Conservative", esg: false, expense: 0.15, aum: 48743, div_yield: 3.7, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.6, "1M": -3.2, "3M": -1.3, "6M": 0.2, "YTD": -0.9, "1Y": 4.2, "2Y": 8.1, "3Y": 6.5}, tags: ["intermediate treasury", "bonds", "dividends", "fixed income"] },
+  { ticker: "SHY", name: "iShares 1-3 Year Treasury Bond ETF", sector: "Fixed Income", industry: "Short-Term Treasury", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Conservative", esg: false, expense: 0.15, aum: 24915, div_yield: 3.8, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.0, "1M": -0.7, "3M": 0.1, "6M": 1.2, "YTD": 0.0, "1Y": 3.7, "2Y": 8.9, "3Y": 12.0}, tags: ["short-term treasury", "dividends", "bonds", "fixed income"] },
+  { ticker: "TIP", name: "iShares TIPS Bond ETF", sector: "Fixed Income", industry: "Inflation Protected", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Conservative", esg: false, expense: 0.19, aum: 14353, div_yield: 3.4, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.5, "1M": -2.0, "3M": -0.3, "6M": -0.2, "YTD": -0.2, "1Y": 3.1, "2Y": 8.8, "3Y": 9.4}, tags: ["inflation protected", "dividends", "fixed income"] },
+  { ticker: "LQD", name: "iShares iBoxx $ Investment Grade Corporate Bond ETF", sector: "Fixed Income", industry: "Corporate Bonds", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Moderately Conservative", esg: false, expense: 0.14, aum: 31986, div_yield: 4.4, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.9, "1M": -3.3, "3M": -2.0, "6M": -1.1, "YTD": -1.6, "1Y": 4.4, "2Y": 8.6, "3Y": 13.6}, tags: ["corporate bonds", "dividends", "bonds", "fixed income"] },
+  { ticker: "HYG", name: "iShares iBoxx $ High Yield Corporate Bond ETF", sector: "Fixed Income", industry: "High Yield Bonds", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Moderate", esg: false, expense: 0.49, aum: 16745, div_yield: 5.8, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.9, "1M": -2.0, "3M": -1.4, "6M": -0.1, "YTD": -1.5, "1Y": 5.7, "2Y": 14.1, "3Y": 28.0}, tags: ["high yield bonds", "dividends", "bonds", "fixed income"] },
+  { ticker: "JNK", name: "State Street SPDR Bloomberg High Yield Bond ETF", sector: "Fixed Income", industry: "High Yield Bonds", asset_class: "Fixed Income", geo: "US", provider: "State Street", risk: "Moderate", esg: false, expense: 0.4, aum: 7784, div_yield: 6.6, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.9, "1M": -2.1, "3M": -1.5, "6M": -0.1, "YTD": -1.6, "1Y": 6.0, "2Y": 13.7, "3Y": 28.2}, tags: ["high yield bonds", "dividends", "bonds", "fixed income"] },
+  { ticker: "VCSH", name: "Vanguard Short-Term Corporate Bond Index Fund ETF Shares", sector: "Fixed Income", industry: "Short-Term Corporate", asset_class: "Fixed Income", geo: "US", provider: "Vanguard", risk: "Conservative", esg: false, expense: 0.04, aum: 48298, div_yield: 4.3, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.3, "1M": -1.3, "3M": -0.3, "6M": 1.0, "YTD": -0.4, "1Y": 4.7, "2Y": 11.1, "3Y": 17.1}, tags: ["dividends", "short-term corporate", "fixed income"] },
+  { ticker: "VCIT", name: "Vanguard Intermediate-Term Corporate Bond Index Fund ETF Shares", sector: "Fixed Income", industry: "Intermediate Corporate", asset_class: "Fixed Income", geo: "US", provider: "Vanguard", risk: "Moderately Conservative", esg: false, expense: 0.04, aum: 68528, div_yield: 4.6, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.8, "1M": -3.0, "3M": -1.7, "6M": -0.1, "YTD": -1.4, "1Y": 5.7, "2Y": 11.9, "3Y": 17.6}, tags: ["dividends", "intermediate corporate", "fixed income"] },
+  { ticker: "VCLT", name: "Vanguard Long-Term Corporate Bond Index Fund ETF Shares", sector: "Fixed Income", industry: "Long-Term Corporate", asset_class: "Fixed Income", geo: "US", provider: "Vanguard", risk: "Moderately Conservative", esg: false, expense: 0.04, aum: 8665, div_yield: 5.4, cap: null, style: null, perf: {"1D": 0.0, "1W": -1.2, "1M": -4.6, "3M": -3.0, "6M": -2.5, "YTD": -2.2, "1Y": 3.5, "2Y": 5.4, "3Y": 9.9}, tags: ["long-term corporate", "dividends", "fixed income"] },
+  { ticker: "BIV", name: "Vanguard Intermediate-Term Bond Index Fund", sector: "Fixed Income", industry: "Intermediate Bonds", asset_class: "Fixed Income", geo: "US", provider: "Vanguard", risk: "Moderately Conservative", esg: false, expense: 0.04, aum: 52723, div_yield: 4.0, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.6, "1M": -2.9, "3M": -1.3, "6M": 0.2, "YTD": -1.0, "1Y": 4.9, "2Y": 10.1, "3Y": 12.3}, tags: ["intermediate bonds", "dividends", "bonds", "fixed income"] },
+  { ticker: "BSV", name: "Vanguard Short-Term Bond Index Fund ETF Shares", sector: "Fixed Income", industry: "Short-Term Bonds", asset_class: "Fixed Income", geo: "US", provider: "Vanguard", risk: "Conservative", esg: false, expense: 0.04, aum: 69992, div_yield: 3.8, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.2, "1M": -1.1, "3M": -0.2, "6M": 1.1, "YTD": -0.2, "1Y": 4.1, "2Y": 9.8, "3Y": 13.3}, tags: ["short-term bonds", "bonds", "dividends", "fixed income"] },
+  { ticker: "MUB", name: "iShares National Muni Bond ETF", sector: "Fixed Income", industry: "Municipal Bonds", asset_class: "Fixed Income", geo: "US", provider: "iShares", risk: "Conservative", esg: false, expense: 0.05, aum: 43211, div_yield: 3.1, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.7, "1M": -2.8, "3M": -0.6, "6M": 1.0, "YTD": -1.0, "1Y": 4.2, "2Y": 4.5, "3Y": 7.8}, tags: ["municipal bonds", "dividends", "bonds", "fixed income"] },
+  { ticker: "EMB", name: "iShares J.P. Morgan USD Emerging Markets Bond ETF", sector: "Fixed Income", industry: "Emerging Market Bonds", asset_class: "Fixed Income", geo: "Emerging Markets", provider: "iShares", risk: "Moderately Conservative", esg: false, expense: 0.39, aum: 16458, div_yield: 4.9, cap: null, style: null, perf: {"1D": 0.0, "1W": -1.2, "1M": -4.5, "3M": -2.9, "6M": 0.0, "YTD": -2.7, "1Y": 8.3, "2Y": 15.1, "3Y": 28.2}, tags: ["emerging markets", "dividends", "emerging market bonds", "bonds", "fixed income"] },
+  { ticker: "BNDX", name: "Vanguard Total International Bond Index Fund", sector: "Fixed Income", industry: "International Bonds", asset_class: "Fixed Income", geo: "Global", provider: "Vanguard", risk: "Conservative", esg: false, expense: 0.07, aum: 118795, div_yield: 4.3, cap: null, style: null, perf: {"1D": 0.0, "1W": -0.7, "1M": -2.9, "3M": -1.1, "6M": -0.5, "YTD": -0.9, "1Y": 2.3, "2Y": 5.9, "3Y": 11.2}, tags: ["international bonds", "global", "dividends", "bonds", "fixed income"] },
+  { ticker: "VEA", name: "Vanguard FTSE Developed Markets Index Fund ETF Shares", sector: "Broad Market", industry: "International Developed", asset_class: "Equity", geo: "International Developed", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.05, aum: 307324, div_yield: 2.9, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -2.5, "1M": -11.5, "3M": -1.0, "6M": 6.4, "YTD": -1.7, "1Y": 23.5, "2Y": 32.5, "3Y": 55.8}, tags: ["international developed", "broad market"] },
+  { ticker: "VWO", name: "Vanguard Emerging Markets Stock Index Fund", sector: "Broad Market", industry: "Emerging Markets", asset_class: "Equity", geo: "Emerging Markets", provider: "Vanguard", risk: "Aggressive", esg: false, expense: 0.08, aum: 158399, div_yield: 2.6, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -2.4, "1M": -9.7, "3M": -2.8, "6M": -0.1, "YTD": -4.4, "1Y": 17.1, "2Y": 33.8, "3Y": 44.3}, tags: ["emerging markets", "broad market"] },
+  { ticker: "EFA", name: "iShares MSCI EAFE ETF", sector: "Broad Market", industry: "International Developed", asset_class: "Equity", geo: "International Developed", provider: "iShares", risk: "Moderate", esg: false, expense: 0.32, aum: 77837, div_yield: 3.1, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -2.1, "1M": -11.0, "3M": -2.9, "6M": 3.1, "YTD": -3.3, "1Y": 16.8, "2Y": 26.1, "3Y": 48.7}, tags: ["international developed", "broad market", "dividends"] },
+  { ticker: "EEM", name: "iShares MSCI Emerging Markets ETF", sector: "Broad Market", industry: "Emerging Markets", asset_class: "Equity", geo: "Emerging Markets", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.68, aum: 30140, div_yield: 1.9, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -3.7, "1M": -11.8, "3M": 0.7, "6M": 6.2, "YTD": -1.8, "1Y": 26.8, "2Y": 41.6, "3Y": 52.4}, tags: ["emerging markets", "broad market"] },
+  { ticker: "VXUS", name: "Vanguard Total International Stock Index Fund ETF Shares", sector: "Broad Market", industry: "Total International", asset_class: "Equity", geo: "Global", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.07, aum: 636672, div_yield: 2.9, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -2.5, "1M": -10.8, "3M": -1.4, "6M": 4.7, "YTD": -2.3, "1Y": 21.8, "2Y": 32.7, "3Y": 52.9}, tags: ["broad market", "global", "total international"] },
+  { ticker: "IXUS", name: "iShares Core MSCI Total International Stock ETF", sector: "Broad Market", industry: "Total International", asset_class: "Equity", geo: "Global", provider: "iShares", risk: "Moderate", esg: false, expense: 0.07, aum: 57612, div_yield: 2.9, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -2.5, "1M": -10.9, "3M": -1.7, "6M": 4.3, "YTD": -2.4, "1Y": 21.8, "2Y": 32.6, "3Y": 52.8}, tags: ["broad market", "global", "total international"] },
+  { ticker: "IEFA", name: "iShares Core MSCI EAFE ETF", sector: "Broad Market", industry: "International Developed", asset_class: "Equity", geo: "International Developed", provider: "iShares", risk: "Moderate", esg: false, expense: 0.07, aum: 182588, div_yield: 3.2, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -2.2, "1M": -11.0, "3M": -2.7, "6M": 3.0, "YTD": -3.2, "1Y": 17.7, "2Y": 27.1, "3Y": 49.2}, tags: ["international developed", "broad market", "dividends"] },
+  { ticker: "IEMG", name: "iShares Core MSCI Emerging Markets ETF", sector: "Broad Market", industry: "Emerging Markets", asset_class: "Equity", geo: "Emerging Markets", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.09, aum: 148632, div_yield: 2.4, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -3.7, "1M": -11.6, "3M": 0.7, "6M": 5.9, "YTD": -1.7, "1Y": 26.9, "2Y": 40.3, "3Y": 54.0}, tags: ["emerging markets", "broad market"] },
+  { ticker: "VGK", name: "Vanguard FTSE Europe ETF", sector: "Broad Market", industry: "Europe", asset_class: "Equity", geo: "International Developed", provider: "Vanguard", risk: "Moderate", esg: false, expense: 0.08, aum: 40994, div_yield: 2.6, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -2.0, "1M": -11.5, "3M": -4.9, "6M": 2.0, "YTD": -5.6, "1Y": 15.0, "2Y": 26.5, "3Y": 48.8}, tags: ["international developed", "broad market", "europe"] },
+  { ticker: "EWJ", name: "iShares MSCI Japan ETF", sector: "Broad Market", industry: "Japan", asset_class: "Equity", geo: "International Developed", provider: "iShares", risk: "Moderate", esg: false, expense: 0.5, aum: 20312, div_yield: 4.0, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -2.5, "1M": -11.8, "3M": 0.6, "6M": 5.0, "YTD": 0.1, "1Y": 20.5, "2Y": 22.7, "3Y": 54.7}, tags: ["international developed", "broad market", "dividends", "japan"] },
+  { ticker: "EWZ", name: "iShares MSCI Brazil ETF", sector: "Broad Market", industry: "Brazil", asset_class: "Equity", geo: "Emerging Markets", provider: "iShares", risk: "Moderately Aggressive", esg: false, expense: 0.58, aum: 9655, div_yield: 4.3, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": -0.6, "1M": -5.4, "3M": 15.8, "6M": 23.4, "YTD": 13.8, "1Y": 46.7, "2Y": 29.4, "3Y": 66.0}, tags: ["emerging markets", "broad market", "dividends", "brazil"] },
+  { ticker: "FXI", name: "iShares China Large-Cap ETF", sector: "Broad Market", industry: "China Large Cap", asset_class: "Equity", geo: "Emerging Markets", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.74, aum: 6212, div_yield: 2.5, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": -1.5, "1M": -6.5, "3M": -10.5, "6M": -12.6, "YTD": -12.5, "1Y": -2.6, "2Y": 53.4, "3Y": 27.6}, tags: ["china large cap", "emerging markets", "broad market"] },
+  { ticker: "KWEB", name: "KraneShares CSI China Internet ETF", sector: "Technology", industry: "China Internet", asset_class: "Equity", geo: "Emerging Markets", provider: "KraneShares", risk: "Aggressive", esg: false, expense: 0.69, aum: 6909, div_yield: 6.7, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -1.9, "1M": -10.1, "3M": -19.9, "6M": -27.9, "YTD": -21.7, "1Y": -18.1, "2Y": 17.4, "3Y": 0.7}, tags: ["technology", "dividends", "china internet", "emerging markets"] },
+  { ticker: "INDA", name: "iShares MSCI India ETF", sector: "Broad Market", industry: "India", asset_class: "Equity", geo: "Emerging Markets", provider: "iShares", risk: "Moderately Aggressive", esg: false, expense: 0.64, aum: 9252, div_yield: 0.0, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -3.8, "1M": -12.3, "3M": -14.9, "6M": -12.3, "YTD": -16.0, "1Y": -11.5, "2Y": -8.7, "3Y": 20.4}, tags: ["india", "emerging markets", "broad market"] },
+  { ticker: "GLD", name: "SPDR Gold Shares", sector: "Commodities", industry: "Precious Metals", asset_class: "Commodity", geo: "Global", provider: "State Street", risk: "Moderate", esg: false, expense: 0.4, aum: 184864, div_yield: 0.0, cap: null, style: null, perf: {"1D": 0.0, "1W": 2.6, "1M": -14.3, "3M": -0.5, "6M": 19.6, "YTD": 4.1, "1Y": 47.1, "2Y": 106.3, "3Y": 126.1}, tags: ["commodity", "global", "precious metals", "commodities"] },
+  { ticker: "SLV", name: "iShares Silver Trust", sector: "Commodities", industry: "Precious Metals", asset_class: "Commodity", geo: "Global", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.5, aum: 46246, div_yield: 0.0, cap: null, style: null, perf: {"1D": 0.0, "1W": 1.6, "1M": -25.4, "3M": -10.8, "6M": 51.6, "YTD": -3.5, "1Y": 102.6, "2Y": 181.0, "3Y": 196.0}, tags: ["commodity", "global", "precious metals", "commodities"] },
+  { ticker: "IAU", name: "iShares Gold Trust", sector: "Commodities", industry: "Precious Metals", asset_class: "Commodity", geo: "Global", provider: "iShares", risk: "Moderate", esg: false, expense: 0.25, aum: 83821, div_yield: 0.0, cap: null, style: null, perf: {"1D": 0.0, "1W": 2.6, "1M": -14.3, "3M": -0.5, "6M": 19.7, "YTD": 4.2, "1Y": 47.3, "2Y": 106.9, "3Y": 127.0}, tags: ["commodity", "global", "precious metals", "commodities"] },
+  { ticker: "GDX", name: "VanEck Gold Miners ETF", sector: "Commodities", industry: "Gold Miners", asset_class: "Commodity", geo: "Global", provider: "VanEck", risk: "Aggressive", esg: false, expense: 0.51, aum: 36500, div_yield: 0.5, cap: "Mid", style: "Value", perf: {"1D": 0.0, "1W": 2.9, "1M": -25.9, "3M": -6.0, "6M": 15.7, "YTD": 0.1, "1Y": 88.8, "2Y": 193.1, "3Y": 175.0}, tags: ["gold miners", "commodity", "global", "commodities"] },
+  { ticker: "DBA", name: "Invesco DB Agriculture Fund", sector: "Commodities", industry: "Agriculture", asset_class: "Commodity", geo: "Global", provider: "Invesco", risk: "Moderately Aggressive", esg: false, expense: 0.85, aum: 746, div_yield: 3.5, cap: null, style: null, perf: {"1D": 0.0, "1W": 1.2, "1M": 4.4, "3M": 5.9, "6M": 4.3, "YTD": 6.3, "1Y": 6.5, "2Y": 18.9, "3Y": 51.4}, tags: ["agriculture", "global", "dividends", "commodity", "commodities"] },
+  { ticker: "USO", name: "United States Oil Fund, LP", sector: "Commodities", industry: "Oil", asset_class: "Commodity", geo: "Global", provider: "USCF", risk: "Aggressive", esg: false, expense: 0.72, aum: 1137, div_yield: 0.0, cap: null, style: null, perf: {"1D": 0.0, "1W": 12.3, "1M": 51.6, "3M": 81.4, "6M": 61.3, "YTD": 80.1, "1Y": 64.5, "2Y": 59.7, "3Y": 92.4}, tags: ["commodity", "oil", "global", "commodities"] },
+  { ticker: "DBC", name: "Invesco DB Commodity Index Tracking Fund", sector: "Commodities", industry: "Diversified Commodities", asset_class: "Commodity", geo: "Global", provider: "Invesco", risk: "Moderate", esg: false, expense: 0.85, aum: 1403, div_yield: 3.0, cap: null, style: null, perf: {"1D": 0.0, "1W": 4.9, "1M": 15.9, "3M": 28.2, "6M": 31.9, "YTD": 30.0, "1Y": 35.1, "2Y": 38.4, "3Y": 41.5}, tags: ["diversified commodities", "global", "dividends", "commodity", "commodities"] },
+  { ticker: "SCHD", name: "Schwab U.S. Dividend Equity ETF", sector: "Broad Market", industry: "Dividend Focus", asset_class: "Equity", geo: "US", provider: "Schwab", risk: "Moderately Conservative", esg: false, expense: 0.06, aum: 85904, div_yield: 3.3, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": -0.3, "1M": -4.2, "3M": 10.1, "6M": 13.0, "YTD": 9.8, "1Y": 13.0, "2Y": 23.0, "3Y": 42.1}, tags: ["value", "broad market", "dividends", "dividend focus"] },
+  { ticker: "VIG", name: "Vanguard Dividend Appreciation Index Fund ETF Shares", sector: "Broad Market", industry: "Dividend Growth", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Conservative", esg: false, expense: 0.06, aum: 123751, div_yield: 1.6, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -2.0, "1M": -7.5, "3M": -5.3, "6M": -1.4, "YTD": -4.5, "1Y": 9.6, "2Y": 20.6, "3Y": 48.0}, tags: ["growth", "value", "broad market", "dividend growth"] },
+  { ticker: "VYM", name: "Vanguard High Dividend Yield Index Fund ETF Shares", sector: "Broad Market", industry: "High Dividend", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderately Conservative", esg: false, expense: 0.06, aum: 92321, div_yield: 2.3, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": -0.7, "1M": -5.5, "3M": 1.0, "6M": 4.8, "YTD": 1.2, "1Y": 15.9, "2Y": 29.3, "3Y": 54.3}, tags: ["value", "broad market", "high dividend"] },
+  { ticker: "DVY", name: "iShares Select Dividend ETF", sector: "Broad Market", industry: "Dividend Select", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Moderately Conservative", esg: false, expense: 0.38, aum: 22861, div_yield: 3.3, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": 1.3, "1M": -3.6, "3M": 5.6, "6M": 7.8, "YTD": 5.6, "1Y": 15.9, "2Y": 33.7, "3Y": 46.8}, tags: ["value", "broad market", "dividend select", "dividends"] },
+  { ticker: "HDV", name: "iShares Core High Dividend ETF", sector: "Broad Market", industry: "High Dividend", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Moderately Conservative", esg: false, expense: 0.08, aum: 13758, div_yield: 2.8, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": 1.4, "1M": -3.2, "3M": 11.3, "6M": 12.1, "YTD": 11.0, "1Y": 16.5, "2Y": 33.5, "3Y": 50.5}, tags: ["value", "broad market", "high dividend"] },
+  { ticker: "DGRO", name: "iShares Core Dividend Growth ETF", sector: "Broad Market", industry: "Dividend Growth", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Moderately Conservative", esg: false, expense: 0.08, aum: 38826, div_yield: 2.0, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -0.9, "1M": -6.3, "3M": -1.4, "6M": 2.8, "YTD": -0.8, "1Y": 13.8, "2Y": 26.0, "3Y": 51.7}, tags: ["growth", "value", "broad market", "dividend growth"] },
+  { ticker: "JEPI", name: "JPMorgan Equity Premium Income ETF", sector: "Broad Market", industry: "Covered Call Strategy", asset_class: "Equity", geo: "US", provider: "JPMorgan", risk: "Moderately Conservative", esg: false, expense: 0.35, aum: 44962, div_yield: 7.9, cap: "Large", style: "Value", perf: {"1D": 0.0, "1W": -1.8, "1M": -6.7, "3M": -2.4, "6M": 1.3, "YTD": -1.9, "1Y": 5.2, "2Y": 13.3, "3Y": 31.4}, tags: ["covered call strategy", "broad market", "dividends"] },
+  { ticker: "JEPQ", name: "JPMorgan Nasdaq Equity Premium Income ETF", sector: "Technology", industry: "Covered Call Strategy", asset_class: "Equity", geo: "US", provider: "JPMorgan", risk: "Moderately Aggressive", esg: false, expense: 0.35, aum: 34604, div_yield: 10.6, cap: "Large", style: "Growth", perf: {"1D": 0.0, "1W": -3.9, "1M": -5.9, "3M": -6.3, "6M": -0.4, "YTD": -5.2, "1Y": 14.2, "2Y": 23.7, "3Y": 67.9}, tags: ["covered call strategy", "technology", "dividends"] },
+  { ticker: "IBIT", name: "iShares Bitcoin Trust ETF", sector: "Digital Assets", industry: "Cryptocurrency", asset_class: "Crypto", geo: "Global", provider: "iShares", risk: "Aggressive", esg: false, expense: 0.25, aum: 50147, div_yield: 0.0, cap: null, style: null, perf: {"1D": 0.0, "1W": -6.6, "1M": 0.6, "3M": -24.6, "6M": -39.6, "YTD": -26.6, "1Y": -24.4, "2Y": -7.8, "3Y": 40.4}, tags: ["crypto", "cryptocurrency", "global", "digital assets"] },
+  { ticker: "ETHE", name: "Grayscale Ethereum Staking ETF", sector: "Digital Assets", industry: "Cryptocurrency", asset_class: "Crypto", geo: "Global", provider: "Grayscale", risk: "Aggressive", esg: false, expense: 0.25, aum: 1669, div_yield: 0.7, cap: null, style: null, perf: {"1D": 0.0, "1W": -7.8, "1M": 3.3, "3M": -32.3, "6M": -50.9, "YTD": -36.4, "1Y": -2.6, "2Y": -33.2, "3Y": 120.9}, tags: ["crypto", "cryptocurrency", "global", "digital assets"] },
+  { ticker: "ESGU", name: "iShares ESG Aware MSCI USA ETF", sector: "Broad Market", industry: "ESG Large Cap", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Moderate", esg: true, expense: 0.15, aum: 15716, div_yield: 1.0, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -3.4, "1M": -7.4, "3M": -8.4, "6M": -4.2, "YTD": -7.4, "1Y": 12.6, "2Y": 23.4, "3Y": 63.7}, tags: ["sustainable", "broad market", "esg large cap", "esg"] },
+  { ticker: "ESGV", name: "Vanguard ESG U.S. Stock ETF", sector: "Broad Market", industry: "ESG Total Market", asset_class: "Equity", geo: "US", provider: "Vanguard", risk: "Moderate", esg: true, expense: 0.09, aum: 11685, div_yield: 0.9, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -3.9, "1M": -8.2, "3M": -10.9, "6M": -6.9, "YTD": -9.8, "1Y": 10.4, "2Y": 20.2, "3Y": 62.9}, tags: ["sustainable", "broad market", "esg", "esg total market"] },
+  { ticker: "SUSA", name: "iShares ESG Optimized MSCI USA ETF", sector: "Broad Market", industry: "ESG Select", asset_class: "Equity", geo: "US", provider: "iShares", risk: "Moderate", esg: true, expense: 0.25, aum: 3696, div_yield: 0.9, cap: "Large", style: "Blend", perf: {"1D": 0.0, "1W": -3.5, "1M": -7.6, "3M": -8.5, "6M": -3.9, "YTD": -7.4, "1Y": 12.0, "2Y": 21.6, "3Y": 57.7}, tags: ["sustainable", "broad market", "esg", "esg select"] },
+  { ticker: "ARKW", name: "ARK Next Generation Internet ETF", sector: "Technology", industry: "Next Gen Internet", asset_class: "Equity", geo: "US", provider: "ARK Invest", risk: "Aggressive", esg: false, expense: 0.82, aum: 1596, div_yield: 1.9, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -9.0, "1M": -7.4, "3M": -23.7, "6M": -30.6, "YTD": -22.4, "1Y": 17.0, "2Y": 40.4, "3Y": 138.6}, tags: ["technology", "next gen internet"] },
+  { ticker: "LIT", name: "Global X Lithium & Battery Tech ETF", sector: "Materials", industry: "Lithium & Battery", asset_class: "Equity", geo: "US", provider: "Global X", risk: "Aggressive", esg: false, expense: 0.75, aum: 1792, div_yield: 0.4, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": 2.9, "1M": -4.6, "3M": 6.2, "6M": 29.8, "YTD": 8.5, "1Y": 79.8, "2Y": 63.3, "3Y": 20.5}, tags: ["lithium & battery", "materials"] },
+  { ticker: "REMX", name: "VanEck Rare Earth and Strategic Metals ETF", sector: "Materials", industry: "Rare Earth Metals", asset_class: "Equity", geo: "US", provider: "VanEck", risk: "Aggressive", esg: false, expense: 0.69, aum: 3042, div_yield: 1.3, cap: "Small", style: "Value", perf: {"1D": 0.0, "1W": 3.0, "1M": -13.8, "3M": 12.2, "6M": 33.1, "YTD": 12.1, "1Y": 109.7, "2Y": 79.1, "3Y": 12.4}, tags: ["rare earth metals", "materials"] },
+  { ticker: "HERO", name: "Global X Video Games & Esports ETF", sector: "Technology", industry: "Video Games & Esports", asset_class: "Equity", geo: "US", provider: "Global X", risk: "Aggressive", esg: false, expense: 0.5, aum: 88, div_yield: 1.8, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -2.3, "1M": -8.3, "3M": -15.6, "6M": -24.2, "YTD": -16.4, "1Y": -1.4, "2Y": 26.8, "3Y": 31.7}, tags: ["video games & esports", "technology"] },
+  { ticker: "BETZ", name: "Roundhill Sports Betting & iGaming ETF", sector: "Technology", industry: "Sports Betting & iGaming", asset_class: "Equity", geo: "US", provider: "Roundhill", risk: "Aggressive", esg: false, expense: 0.75, aum: 52, div_yield: 5.2, cap: "Mid", style: "Growth", perf: {"1D": 0.0, "1W": -5.6, "1M": -5.4, "3M": -18.0, "6M": -26.1, "YTD": -17.1, "1Y": -7.5, "2Y": 2.5, "3Y": 19.1}, tags: ["technology", "dividends", "sports betting & igaming"] },
 ];
 
 // ─── Pre-computed interest mappings ───
@@ -291,14 +360,15 @@ function DisclosureModal({ onClose }) {
           }}>×</button>
         </div>
         {[
-          { t: "Not Investment Advice", p: "This application is provided for informational and educational purposes only. Nothing presented here constitutes investment advice, financial advice, trading advice, or any other form of professional advice. The information should not be relied upon for making investment decisions." },
+          { t: "Sample & Illustrative Data Only", p: "All data displayed in this application is sample, illustrative, and approximate. It is NOT real-time data, NOT live market data, and is NOT sourced from or endorsed by any financial data provider, stock exchange, or fund company. Performance figures, expense ratios, AUM, dividend yields, and all other metrics shown are approximate values used solely for demonstration purposes and may not reflect actual current or historical values. Do not rely on any data shown in this application for any purpose." },
+          { t: "Technology Demonstration", p: "This application exists solely as a technology demonstration showcasing modern web development techniques including React, responsive design, and interactive data filtering. It is a portfolio project and is not intended to serve as a financial tool, investment research platform, or data terminal of any kind." },
+          { t: "Not Investment Advice", p: "Nothing presented in this application constitutes investment advice, financial advice, trading advice, or any other form of professional advice. No investment decisions should be made based on any information displayed here." },
+          { t: "No Affiliation", p: "This application is not affiliated with, endorsed by, or connected to any ETF provider, fund company, stock exchange, financial data vendor, or financial institution. Any ETF names, ticker symbols, or fund provider names referenced are trademarks of their respective owners and are used here for identification purposes only within this technology demonstration." },
           { t: "No Fiduciary Relationship", p: "Use of this application does not create a fiduciary, advisory, or professional relationship between you and the creator of this application. The creator is not a registered investment advisor, broker-dealer, or financial planner." },
-          { t: "Past Performance", p: "Past performance is not indicative of future results. Historical returns, expected returns, and probability projections are provided for informational purposes and may not reflect actual future performance. All investments involve risk, including the possible loss of principal." },
-          { t: "Data Accuracy", p: "While we strive to provide accurate and up-to-date information, the data presented may contain errors, omissions, or delays. ETF data is sourced from publicly available information and is refreshed periodically. Real-time accuracy is not guaranteed." },
+          { t: "Past Performance", p: "Even where approximate historical performance figures are shown, past performance is not indicative of future results. All investments involve risk, including the possible loss of principal." },
+          { t: "No Warranty on Data", p: "The data presented is provided 'as is' without warranty of any kind, express or implied. The creator makes no representations regarding the accuracy, completeness, currentness, or reliability of any data shown. Data may contain errors, omissions, or be significantly outdated." },
           { t: "Consult a Professional", p: "Before making any investment decisions, you should consult with a qualified financial advisor, tax professional, or other appropriate professional who can consider your specific circumstances, risk tolerance, and financial goals." },
-          { t: "Technology Demonstration", p: "This application is primarily a technology demonstration showcasing modern web development techniques. It is not intended to serve as a comprehensive investment research platform or to replace professional-grade financial tools." },
-          { t: "Third-Party Data", p: "ETF information, including performance data, expense ratios, and holdings information, is derived from publicly available sources. The creator does not guarantee the completeness or timeliness of this data." },
-          { t: "Risk of Loss", p: "Investing in ETFs involves risk, including the potential loss of principal. Different types of ETFs carry different levels of risk. Leveraged and inverse ETFs, sector-specific ETFs, and international ETFs may carry additional risks not present in broad-market index ETFs." },
+          { t: "Risk of Loss", p: "Investing in ETFs involves risk, including the potential loss of principal. Different types of ETFs carry different levels of risk. This application does not assess, evaluate, or make any representations about the risk of any particular investment." },
         ].map(({ t, p }, i) => (
           <div key={i} style={{ marginBottom: 20 }}>
             <h3 style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 600, color: "var(--text-primary)", fontFamily: "'DM Sans', sans-serif" }}>{t}</h3>
@@ -310,8 +380,22 @@ function DisclosureModal({ onClose }) {
   );
 }
 
+// ─── Responsive hook — tracks window width so components can adapt to screen size ───
+function useWindowWidth() {
+  const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  useEffect(() => {
+    const handle = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handle);
+    return () => window.removeEventListener("resize", handle);
+  }, []);
+  return width;
+}
+
 // ─── Main App ───
 export default function ETFFinderApp() {
+  const windowWidth = useWindowWidth();
+  const isMobile = windowWidth < 768;
+  const isTablet = windowWidth >= 768 && windowWidth < 1024;
   const [sectors, setSectors] = useState([]);
   const [industries, setIndustries] = useState([]);
   const [riskCats, setRiskCats] = useState([]);
@@ -328,6 +412,7 @@ export default function ETFFinderApp() {
   const [expenseFilter, setExpenseFilter] = useState("any");
   const [aumFilter, setAumFilter] = useState("any");
   const [divYieldFilter, setDivYieldFilter] = useState("any");
+  const [styleBoxSelection, setStyleBoxSelection] = useState([]);
 
   const [sortCol, setSortCol] = useState("ticker");
   const [sortDir, setSortDir] = useState("asc");
@@ -338,7 +423,7 @@ export default function ETFFinderApp() {
   const [packageOpen, setPackageOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [page, setPage] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(typeof window !== "undefined" ? window.innerWidth >= 768 : true);
   const PAGE_SIZE = 8;
 
   const toggleChip = useCallback((list, setList) => (val) => {
@@ -374,6 +459,10 @@ export default function ETFFinderApp() {
       if (geoFocus.length > 0 && !geoFocus.includes(etf.geo)) return false;
       if (providers.length > 0 && !providers.includes(etf.provider)) return false;
       if (esgOnly && !etf.esg) return false;
+      if (styleBoxSelection.length > 0) {
+        if (!etf.cap || !etf.style) return false;
+        if (!styleBoxSelection.includes(etf.cap + "-" + etf.style)) return false;
+      }
       // Expense ratio
       if (expenseFilter !== "any") {
         const e = etf.expense;
@@ -418,7 +507,7 @@ export default function ETFFinderApp() {
       }
       return true;
     });
-  }, [sectors, industries, riskCats, perfFilters, matchedInterests, assetClasses, geoFocus, providers, esgOnly, expenseFilter, aumFilter, divYieldFilter]);
+  }, [sectors, industries, riskCats, perfFilters, matchedInterests, assetClasses, geoFocus, providers, esgOnly, expenseFilter, aumFilter, divYieldFilter, styleBoxSelection]);
 
   // Sort
   const sorted = useMemo(() => {
@@ -451,6 +540,7 @@ export default function ETFFinderApp() {
     setPerfFilters(Object.fromEntries(PERF_RANGES.map(r => [r, PERF_PRESETS[0]])));
     setAssetClasses([]); setGeoFocus([]); setProviders([]);
     setEsgOnly(false); setExpenseFilter("any"); setAumFilter("any"); setDivYieldFilter("any");
+    setStyleBoxSelection([]);
     setPage(0);
   };
 
@@ -512,36 +602,48 @@ export default function ETFFinderApp() {
         input[type="range"]::-webkit-slider-thumb { width: 16px; height: 16px; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
         .etf-row:hover { background: var(--surface-hover) !important; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+        .mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; animation: fadeIn 0.2s ease; }
+        .mobile-sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 85%; max-width: 360px; z-index: 201;
+          background: var(--surface); overflow-y: auto; animation: slideInLeft 0.25s ease;
+          padding: 20px 20px 100px; box-shadow: 4px 0 24px rgba(0,0,0,0.1); }
+        @media (max-width: 767px) {
+          .hide-mobile { display: none !important; }
+          .mobile-compact-cell { padding: 6px 8px !important; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .hide-tablet { display: none !important; }
+        }
       `}</style>
 
       <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* ─── Header ─── */}
         <header style={{
           background: "var(--surface)", borderBottom: "1px solid var(--border)",
-          padding: "20px 32px", display: "flex", alignItems: "center", justifyContent: "space-between",
-          position: "sticky", top: 0, zIndex: 100,
+          padding: isMobile ? "12px 16px" : "20px 32px", display: "flex", alignItems: "center", justifyContent: "space-between",
+          position: "sticky", top: 0, zIndex: 100, flexShrink: 0,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 14 }}>
             <div style={{
-              width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg, var(--accent), #818CF8)",
+              width: isMobile ? 32 : 38, height: isMobile ? 32 : 38, borderRadius: 10, background: "linear-gradient(135deg, var(--accent), #818CF8)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff", fontWeight: 700, fontSize: 16, fontFamily: "'Outfit', sans-serif",
+              color: "#fff", fontWeight: 700, fontSize: isMobile ? 14 : 16, fontFamily: "'Outfit', sans-serif",
             }}>E</div>
             <div>
-              <h1 style={{ fontSize: 20, fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: "var(--text-primary)", lineHeight: 1.1 }}>
+              <h1 style={{ fontSize: isMobile ? 16 : 20, fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: "var(--text-primary)", lineHeight: 1.1 }}>
                 ETF Finder
               </h1>
-              <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+              {!isMobile && <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
                 Discover and compare exchange-traded funds
-              </p>
+              </p>}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 12 }}>
             <span style={{
               background: "var(--accent-light)", color: "var(--accent)", fontSize: 12, fontWeight: 600,
               padding: "4px 12px", borderRadius: 20,
@@ -557,11 +659,13 @@ export default function ETFFinderApp() {
               </span>
             )}
             <button onClick={() => setSidebarOpen(s => !s)} style={{
-              background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
-              padding: "6px 14px", fontSize: 13, cursor: "pointer", color: "var(--text-secondary)",
+              background: sidebarOpen && !isMobile ? "var(--accent-light)" : "var(--surface)",
+              border: sidebarOpen && !isMobile ? "1px solid var(--accent)" : "1px solid var(--border)", borderRadius: 8,
+              padding: isMobile ? "8px 14px" : "6px 14px", fontSize: 13, cursor: "pointer",
+              color: sidebarOpen && !isMobile ? "var(--accent)" : "var(--text-secondary)",
               fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
             }}>
-              {sidebarOpen ? "Hide Filters" : "Show Filters"}
+              {isMobile ? "Filters" : (sidebarOpen ? "Hide Filters" : "Show Filters")}
             </button>
           </div>
         </header>
@@ -569,18 +673,30 @@ export default function ETFFinderApp() {
         {/* ─── Main Content ─── */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
           
-          {/* ─── Sidebar ─── */}
+          {/* ─── Sidebar — mobile: overlay, desktop: side panel ─── */}
+          {sidebarOpen && isMobile && (
+            <div className="mobile-overlay" onClick={() => setSidebarOpen(false)} />
+          )}
           {sidebarOpen && (
-            <aside style={{
-              width: 320, minWidth: 320, background: "var(--surface)", borderRight: "1px solid var(--border)",
+            <aside className={isMobile ? "mobile-sidebar" : ""} style={isMobile ? {} : {
+              width: isTablet ? 280 : 320, minWidth: isTablet ? 280 : 320, background: "var(--surface)", borderRight: "1px solid var(--border)",
               padding: "20px 20px 100px", overflowY: "auto", animation: "fadeIn 0.2s ease",
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Outfit', sans-serif" }}>Filters</span>
-                <button onClick={clearAll} style={{
-                  background: "none", border: "none", color: "var(--accent)", fontSize: 12,
-                  fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-                }}>Clear all</button>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <button onClick={clearAll} style={{
+                    background: "none", border: "none", color: "var(--accent)", fontSize: 12,
+                    fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                  }}>Clear all</button>
+                  {isMobile && (
+                    <button onClick={() => setSidebarOpen(false)} style={{
+                      background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 8,
+                      width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "var(--text-muted)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>×</button>
+                  )}
+                </div>
               </div>
 
               {/* Interest Search */}
@@ -747,6 +863,54 @@ export default function ETFFinderApp() {
                   </span>
                 </div>
               </FilterSection>
+
+              {/* Investment Style Box */}
+              <FilterSection title="Investment Style" defaultOpen={false}>
+                <div style={{ marginBottom: 6 }}>
+                  {/* Column headers */}
+                  <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 1fr", gap: 2, marginBottom: 2 }}>
+                    <div />
+                    {["Value", "Blend", "Growth"].map(s => (
+                      <div key={s} style={{ textAlign: "center", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", padding: "4px 0" }}>{s}</div>
+                    ))}
+                  </div>
+                  {/* Grid rows */}
+                  {["Large", "Mid", "Small"].map(cap => (
+                    <div key={cap} style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 1fr", gap: 2, marginBottom: 2 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6 }}>{cap}</div>
+                      {["Value", "Blend", "Growth"].map(sty => {
+                        const key = cap + "-" + sty;
+                        const isActive = styleBoxSelection.includes(key);
+                        const count = ETF_DATA.filter(e => e.cap === cap && e.style === sty).length;
+                        return (
+                          <button key={key} onClick={() => {
+                            setStyleBoxSelection(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+                            setPage(0);
+                          }} style={{
+                            aspectRatio: "1", border: isActive ? "2px solid var(--accent)" : "1.5px solid var(--border)",
+                            borderRadius: 6, cursor: "pointer", transition: "all 0.15s ease",
+                            background: isActive ? "var(--accent-light)" : count > 0 ? "var(--surface)" : "var(--bg)",
+                            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                            opacity: count > 0 ? 1 : 0.4,
+                          }}>
+                            <span style={{
+                              fontSize: 14, fontWeight: 700,
+                              fontFamily: "'JetBrains Mono', monospace",
+                              color: isActive ? "var(--accent)" : "var(--text-primary)",
+                            }}>{count}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+                {styleBoxSelection.length > 0 && (
+                  <button onClick={() => setStyleBoxSelection([])} style={{
+                    background: "none", border: "none", color: "var(--accent)", fontSize: 11,
+                    fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", marginTop: 4,
+                  }}>Clear style selection</button>
+                )}
+              </FilterSection>
             </aside>
           )}
 
@@ -772,10 +936,16 @@ export default function ETFFinderApp() {
                     padding: "2px 10px", borderRadius: 12, border: "1px solid var(--border)",
                   }}>{sorted.length}</span>
                 </div>
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Click row to expand · Click + to add</span>
+                <span className="hide-mobile" style={{ fontSize: 11, color: "var(--text-muted)" }}>Click row to expand · Click + to add</span>
+              </div>
+              <div style={{
+                padding: "6px 16px", background: "var(--amber-bg)", borderBottom: "1px solid var(--border)",
+                fontSize: 11, color: "var(--amber)", fontWeight: 500, flexShrink: 0,
+              }}>
+                Sample data for demonstration only — not real-time, not live, not for investment decisions
               </div>
               <div style={{ flex: 1, overflowY: "auto", overflowX: "auto", background: "var(--bg)" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820, background: "var(--surface)" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isMobile ? 400 : 820, background: "var(--surface)" }}>
                   <thead>
                     <tr>
                       <th style={{
@@ -783,11 +953,11 @@ export default function ETFFinderApp() {
                         borderBottom: "2px solid var(--border)", position: "sticky", top: 0, zIndex: 2,
                       }}></th>
                       <SortHeader col="ticker" label="Ticker" width="72px" />
-                      <SortHeader col="name" label="Name" width="220px" />
-                      <SortHeader col="sector" label="Sector" />
-                      <SortHeader col="risk" label="Risk" />
-                      <SortHeader col="expense" label="Exp." mono />
-                      <SortHeader col="div_yield" label="Yield" mono />
+                      <SortHeader col="name" label="Name" width={isMobile ? "140px" : "220px"} />
+                      <th className="hide-mobile" style={{ padding: "8px 12px", background: "var(--surface)", borderBottom: "2px solid var(--border)", position: "sticky", top: 0, zIndex: 2 }}><span onClick={() => handleSort("sector")} style={{ cursor: "pointer", fontSize: 11, fontWeight: 600, color: sortCol === "sector" ? "var(--accent)" : "var(--text-muted)", letterSpacing: "0.04em", textTransform: "uppercase" }}>SECTOR {sortCol === "sector" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span></th>
+                      <th className="hide-mobile hide-tablet" style={{ padding: "8px 12px", background: "var(--surface)", borderBottom: "2px solid var(--border)", position: "sticky", top: 0, zIndex: 2 }}><span onClick={() => handleSort("risk")} style={{ cursor: "pointer", fontSize: 11, fontWeight: 600, color: sortCol === "risk" ? "var(--accent)" : "var(--text-muted)", letterSpacing: "0.04em", textTransform: "uppercase" }}>RISK {sortCol === "risk" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span></th>
+                      <th className="hide-mobile hide-tablet" style={{ padding: "8px 12px", textAlign: "right", background: "var(--surface)", borderBottom: "2px solid var(--border)", position: "sticky", top: 0, zIndex: 2 }}><span onClick={() => handleSort("expense")} style={{ cursor: "pointer", fontSize: 11, fontWeight: 600, color: sortCol === "expense" ? "var(--accent)" : "var(--text-muted)", letterSpacing: "0.04em", textTransform: "uppercase", fontFamily: "'JetBrains Mono', monospace" }}>EXP. {sortCol === "expense" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span></th>
+                      <th className="hide-mobile" style={{ padding: "8px 12px", textAlign: "right", background: "var(--surface)", borderBottom: "2px solid var(--border)", position: "sticky", top: 0, zIndex: 2 }}><span onClick={() => handleSort("div_yield")} style={{ cursor: "pointer", fontSize: 11, fontWeight: 600, color: sortCol === "div_yield" ? "var(--accent)" : "var(--text-muted)", letterSpacing: "0.04em", textTransform: "uppercase", fontFamily: "'JetBrains Mono', monospace" }}>YIELD {sortCol === "div_yield" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span></th>
                       <SortHeader col="1Y" label="1Y" mono />
                       <SortHeader col="YTD" label="YTD" mono />
                     </tr>
@@ -831,8 +1001,8 @@ export default function ETFFinderApp() {
                             <td style={{ padding: "8px 12px", fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 }}>
                               {etf.name}
                             </td>
-                            <td style={{ padding: "8px 12px", fontSize: 11, color: "var(--text-muted)" }}>{etf.sector}</td>
-                            <td style={{ padding: "8px 12px" }}>
+                            <td style={{ padding: "8px 12px", fontSize: 11, color: "var(--text-muted)" }} className="hide-mobile">{etf.sector}</td>
+                            <td style={{ padding: "8px 12px" }} className="hide-mobile hide-tablet">
                               <span style={{
                                 fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 10,
                                 background: etf.risk === "Conservative" ? "var(--green-bg)" :
@@ -843,10 +1013,10 @@ export default function ETFFinderApp() {
                                        etf.risk === "Moderate" ? "var(--accent)" : "var(--amber)",
                               }}>{etf.risk.replace("Moderately ", "Mod. ")}</span>
                             </td>
-                            <td style={{ padding: "8px 12px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--text-secondary)" }}>
+                            <td style={{ padding: "8px 12px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--text-secondary)" }} className="hide-mobile hide-tablet">
                               {etf.expense.toFixed(2)}%
                             </td>
-                            <td style={{ padding: "8px 12px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--text-secondary)" }}>
+                            <td style={{ padding: "8px 12px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--text-secondary)" }} className="hide-mobile">
                               {etf.div_yield.toFixed(1)}%
                             </td>
                             <td style={{
@@ -1315,21 +1485,21 @@ export default function ETFFinderApp() {
 
         {/* ─── Footer ─── */}
         <footer style={{
-          background: "var(--surface)", borderTop: "1px solid var(--border)", padding: "16px 32px",
-          display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12,
+          background: "var(--surface)", borderTop: "1px solid var(--border)",
+          padding: isMobile ? "10px 16px" : "16px 32px",
+          display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8,
+          flexShrink: 0,
         }}>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5, maxWidth: 700 }}>
-            <strong style={{ color: "var(--text-secondary)" }}>Disclaimer:</strong> For informational and educational purposes only. 
-            Not investment advice. Past performance does not guarantee future results. 
-            Consult a qualified financial advisor before making investment decisions.
+          <p style={{ fontSize: isMobile ? 10 : 12, color: "var(--text-muted)", lineHeight: 1.5, maxWidth: 700 }}>
+            <strong style={{ color: "var(--text-secondary)" }}>Disclaimer:</strong> {isMobile ? "Sample data only. Not real-time. Not investment advice." : "All data shown is sample and illustrative only — not real-time, not live, and not sourced from any financial data provider. This is a technology demonstration. Not investment advice. Do not use for investment decisions."}
           </p>
           <button onClick={() => setShowDisclosure(true)} style={{
             background: "var(--accent-light)", border: "1px solid var(--accent)",
-            borderRadius: 8, padding: "7px 18px", fontSize: 12, fontWeight: 600,
+            borderRadius: 8, padding: isMobile ? "6px 12px" : "7px 18px", fontSize: isMobile ? 11 : 12, fontWeight: 600,
             color: "var(--accent)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
             whiteSpace: "nowrap",
           }}>
-            Full Disclosures →
+            {isMobile ? "Disclosures" : "Full Disclosures →"}
           </button>
         </footer>
       </div>
