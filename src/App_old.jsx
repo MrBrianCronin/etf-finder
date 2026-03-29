@@ -326,11 +326,9 @@ export default function ETFFinderApp() {
   const [etfPackage, setEtfPackage] = useState([]);
   const [detailETF, setDetailETF] = useState(null);
   const [expandedTicker, setExpandedTicker] = useState(null);
-  const [packageOpen, setPackageOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const PAGE_SIZE = 8;
+  const PAGE_SIZE = 12;
 
   const toggleChip = useCallback((list, setList) => (val) => {
     setList(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
@@ -475,7 +473,7 @@ export default function ETFFinderApp() {
         ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
       `}</style>
 
-      <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         {/* ─── Header ─── */}
         <header style={{
           background: "var(--surface)", borderBottom: "1px solid var(--border)",
@@ -523,7 +521,7 @@ export default function ETFFinderApp() {
         </header>
 
         {/* ─── Main Content ─── */}
-        <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
+        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           
           {/* ─── Sidebar ─── */}
           {sidebarOpen && (
@@ -603,17 +601,17 @@ export default function ETFFinderApp() {
           )}
 
           {/* ─── Results ─── */}
-          <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <main style={{ flex: 1, padding: "16px 20px", overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", gap: 16 }}>
 
-            {/* ═══ SECTION 1: Search Results — fills available space, scrolls internally ═══ */}
+            {/* ═══ SECTION 1: Search Results ═══ */}
             <div style={{
-              flex: 1, minHeight: 0, display: "flex", flexDirection: "column",
-              background: "var(--bg)", borderBottom: "1px solid var(--border)",
+              background: "var(--surface)", borderRadius: 14, border: "1px solid var(--border)",
+              overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", flex: "1 1 auto",
             }}>
               <div style={{
                 padding: "12px 16px", borderBottom: "1px solid var(--border)",
                 display: "flex", justifyContent: "space-between", alignItems: "center",
-                background: "var(--surface)", flexShrink: 0,
+                background: "var(--surface)",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Outfit', sans-serif" }}>
@@ -626,8 +624,8 @@ export default function ETFFinderApp() {
                 </div>
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Click row to expand · Click + to add</span>
               </div>
-              <div style={{ flex: 1, overflowY: "auto", overflowX: "auto", background: "var(--bg)" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820, background: "var(--surface)" }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
                   <thead>
                     <tr>
                       <th style={{
@@ -664,7 +662,7 @@ export default function ETFFinderApp() {
                             }}>
                             <td style={{ padding: "8px 12px", textAlign: "center" }}
                               onClick={e => e.stopPropagation()}>
-                              <button onClick={() => { inPkg ? removeFromPackage(etf.ticker) : addToPackage(etf); if (!packageOpen && !inPkg) setPackageOpen(true); }}
+                              <button onClick={() => inPkg ? removeFromPackage(etf.ticker) : addToPackage(etf)}
                                 style={{
                                   width: 26, height: 26, borderRadius: 8, border: "none",
                                   background: inPkg ? "var(--accent)" : "var(--bg)",
@@ -728,6 +726,7 @@ export default function ETFFinderApp() {
                                 background: "var(--bg)",
                               }}>
                                 <div style={{ padding: "16px 20px" }}>
+                                  {/* Top row: info + add button */}
                                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
                                     <div>
                                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
@@ -749,7 +748,7 @@ export default function ETFFinderApp() {
                                       </p>
                                     </div>
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); inPkg ? removeFromPackage(etf.ticker) : addToPackage(etf); if (!packageOpen && !inPkg) setPackageOpen(true); }}
+                                      onClick={(e) => { e.stopPropagation(); inPkg ? removeFromPackage(etf.ticker) : addToPackage(etf); }}
                                       style={{
                                         padding: "7px 18px", borderRadius: 8, fontSize: 12, fontWeight: 600,
                                         border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
@@ -761,6 +760,7 @@ export default function ETFFinderApp() {
                                     </button>
                                   </div>
 
+                                  {/* Key Metrics */}
                                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
                                     {[
                                       { label: "Expense Ratio", value: etf.expense.toFixed(2) + "%" },
@@ -778,6 +778,7 @@ export default function ETFFinderApp() {
                                     ))}
                                   </div>
 
+                                  {/* Performance Grid */}
                                   <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>Performance</div>
                                   <div style={{ display: "grid", gridTemplateColumns: "repeat(9, 1fr)", gap: 5, marginBottom: 12 }}>
                                     {PERF_RANGES.map(r => {
@@ -798,6 +799,7 @@ export default function ETFFinderApp() {
                                     })}
                                   </div>
 
+                                  {/* Tags */}
                                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                                     {etf.tags.map(t => (
                                       <span key={t} style={{
@@ -822,7 +824,6 @@ export default function ETFFinderApp() {
                 <div style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   padding: "10px 16px", borderTop: "1px solid var(--border)", background: "var(--surface)",
-                  flexShrink: 0,
                 }}>
                   <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                     {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sorted.length)} of {sorted.length}
@@ -847,320 +848,322 @@ export default function ETFFinderApp() {
               )}
             </div>
 
-            {/* ═══ SECTION 2: Selected Package — collapsible sticky bottom panel ═══ */}
-            <div style={{ flexShrink: 0, borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
-              {/* Clickable header bar — always visible */}
-              <button onClick={() => setPackageOpen(p => !p)} style={{
-                width: "100%", padding: "10px 16px", border: "none", background: "var(--surface)",
+            {/* ═══ SECTION 2: Selected Package ═══ */}
+            <div style={{
+              background: "var(--surface)", borderRadius: 14, border: "1px solid var(--border)",
+              overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}>
+              <div style={{
+                padding: "12px 16px", borderBottom: "1px solid var(--border)",
                 display: "flex", justifyContent: "space-between", alignItems: "center",
-                cursor: "pointer", borderBottom: packageOpen ? "1px solid var(--border)" : "none",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Outfit', sans-serif" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Outfit', sans-serif" }}>
                     Your ETF Package
                   </span>
-                  {etfPackage.length > 0 ? (
+                  {etfPackage.length > 0 && (
                     <span style={{
                       background: "var(--accent)", color: "#fff", fontSize: 11, fontWeight: 700,
                       padding: "2px 9px", borderRadius: 10, minWidth: 20, textAlign: "center",
                     }}>{etfPackage.length}</span>
-                  ) : (
-                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>empty</span>
-                  )}
-                  {!packageOpen && etfPackage.length > 0 && (
-                    <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>
-                      {etfPackage.map(e => e.ticker).join(", ")}
-                    </span>
                   )}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {etfPackage.length > 0 && (
-                    <span onClick={(e) => { e.stopPropagation(); setEtfPackage([]); setDetailETF(null); }} style={{
-                      fontSize: 11, color: "var(--red)", fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
-                    }}>Clear</span>
-                  )}
-                  <span style={{
-                    fontSize: 12, color: "var(--text-muted)",
-                    transform: packageOpen ? "rotate(180deg)" : "rotate(0deg)",
-                    transition: "transform 0.2s ease", display: "inline-block",
-                  }}>▾</span>
-                </div>
-              </button>
+                {etfPackage.length > 0 && (
+                  <button onClick={() => { setEtfPackage([]); setDetailETF(null); }} style={{
+                    background: "none", border: "none", color: "var(--red)", fontSize: 11,
+                    fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                  }}>Clear package</button>
+                )}
+              </div>
 
-              {/* Expandable content */}
-              {packageOpen && (
-                <div style={{ maxHeight: 180, overflowY: "auto", animation: "slideUp 0.15s ease" }}>
-                  {etfPackage.length === 0 ? (
-                    <div style={{ padding: "20px 16px", textAlign: "center" }}>
-                      <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
-                        Use the + button in search results to build your package.
-                      </p>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 12 }}>
-                      {etfPackage.map(etf => {
-                        const isActive = detailETF?.ticker === etf.ticker;
-                        return (
-                          <div key={etf.ticker}
-                            onClick={() => { setDetailETF(isActive ? null : etf); if (!detailsOpen) setDetailsOpen(true); }}
-                            style={{
-                              display: "flex", alignItems: "center", gap: 10,
-                              padding: "8px 12px", borderRadius: 8, cursor: "pointer",
-                              border: isActive ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
-                              background: isActive ? "var(--accent-light)" : "var(--bg)",
-                              transition: "all 0.15s ease", minWidth: 160,
-                            }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", fontFamily: "'JetBrains Mono', monospace" }}>
-                                  {etf.ticker}
-                                </span>
-                                <span style={{
-                                  fontSize: 10, fontWeight: 600,
-                                  color: etf.perf["1Y"] >= 0 ? "var(--green)" : "var(--red)",
-                                  fontFamily: "'JetBrains Mono', monospace",
-                                }}>{fmt(etf.perf["1Y"])}</span>
-                              </div>
-                              <div style={{ fontSize: 10, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
-                                {etf.name}
-                              </div>
-                            </div>
-                            <button onClick={(e) => { e.stopPropagation(); removeFromPackage(etf.ticker); }}
-                              style={{
-                                width: 20, height: 20, borderRadius: 6, border: "none",
-                                background: "transparent", color: "var(--text-muted)", cursor: "pointer",
-                                fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center",
-                                flexShrink: 0,
-                              }}
-                              onMouseEnter={e => { e.target.style.background = "var(--red-bg)"; e.target.style.color = "var(--red)"; }}
-                              onMouseLeave={e => { e.target.style.background = "transparent"; e.target.style.color = "var(--text-muted)"; }}
-                            >×</button>
+              {etfPackage.length === 0 ? (
+                <div style={{ padding: "28px 16px", textAlign: "center" }}>
+                  <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.3 }}>📦</div>
+                  <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
+                    No ETFs selected yet. Use the + button above to build your package.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 14 }}>
+                  {etfPackage.map(etf => {
+                    const isActive = detailETF?.ticker === etf.ticker;
+                    return (
+                      <div key={etf.ticker}
+                        onClick={() => setDetailETF(isActive ? null : etf)}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 10,
+                          padding: "10px 14px", borderRadius: 10, cursor: "pointer",
+                          border: isActive ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
+                          background: isActive ? "var(--accent-light)" : "var(--bg)",
+                          transition: "all 0.15s ease", minWidth: 180, flex: "0 1 auto",
+                        }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)", fontFamily: "'JetBrains Mono', monospace" }}>
+                              {etf.ticker}
+                            </span>
+                            <span style={{
+                              fontSize: 11, fontWeight: 600,
+                              color: etf.perf["1Y"] >= 0 ? "var(--green)" : "var(--red)",
+                              fontFamily: "'JetBrains Mono', monospace",
+                            }}>{fmt(etf.perf["1Y"])}</span>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          <div style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                            {etf.name}
+                          </div>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); removeFromPackage(etf.ticker); }}
+                          style={{
+                            width: 22, height: 22, borderRadius: 6, border: "none",
+                            background: "transparent", color: "var(--text-muted)", cursor: "pointer",
+                            fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                          onMouseEnter={e => { e.target.style.background = "var(--red-bg)"; e.target.style.color = "var(--red)"; }}
+                          onMouseLeave={e => { e.target.style.background = "transparent"; e.target.style.color = "var(--text-muted)"; }}
+                        >×</button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            {/* ═══ SECTION 3: Details — collapsible sticky bottom panel ═══ */}
-            <div style={{ flexShrink: 0, background: "var(--surface)" }}>
-              {/* Clickable header bar — always visible */}
-              <button onClick={() => { if (etfPackage.length > 0) setDetailsOpen(d => !d); }} style={{
-                width: "100%", padding: "10px 16px", border: "none", background: "var(--surface)",
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                cursor: etfPackage.length > 0 ? "pointer" : "default",
-                borderBottom: detailsOpen ? "1px solid var(--border)" : "none",
+            {/* ═══ SECTION 3: Details ═══ */}
+            <div style={{
+              background: "var(--surface)", borderRadius: 14, border: "1px solid var(--border)",
+              overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}>
+              <div style={{
+                padding: "12px 16px", borderBottom: "1px solid var(--border)",
+                display: "flex", alignItems: "center", gap: 8,
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Outfit', sans-serif" }}>
-                    Details
+                <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Outfit', sans-serif" }}>
+                  Details
+                </span>
+                {detailETF && (
+                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                    — viewing {detailETF.ticker}
                   </span>
-                  {detailETF && (
-                    <span style={{ fontSize: 11, color: "var(--accent)", fontWeight: 600, fontFamily: "'JetBrains Mono', monospace" }}>
-                      {detailETF.ticker}
-                    </span>
-                  )}
-                  {!detailETF && etfPackage.length > 0 && (
-                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>package overview</span>
-                  )}
-                  {etfPackage.length === 0 && (
-                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>add ETFs to view</span>
-                  )}
-                </div>
-                {etfPackage.length > 0 && (
-                  <span style={{
-                    fontSize: 12, color: "var(--text-muted)",
-                    transform: detailsOpen ? "rotate(180deg)" : "rotate(0deg)",
-                    transition: "transform 0.2s ease", display: "inline-block",
-                  }}>▾</span>
                 )}
-              </button>
+                {!detailETF && etfPackage.length > 0 && (
+                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                    — package overview
+                  </span>
+                )}
+              </div>
 
-              {/* Expandable content */}
-              {detailsOpen && etfPackage.length > 0 && (
-                <div style={{ maxHeight: 350, overflowY: "auto", animation: "slideUp 0.15s ease" }}>
-                  {detailETF ? (
-                    /* ── Individual ETF Detail View ── */
-                    <div style={{ padding: 16 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                            <span style={{ fontSize: 18, fontWeight: 800, color: "var(--accent)", fontFamily: "'JetBrains Mono', monospace" }}>
-                              {detailETF.ticker}
-                            </span>
-                            <span style={{
-                              fontSize: 10, fontWeight: 600, padding: "2px 9px", borderRadius: 10,
-                              background: "var(--accent-light)", color: "var(--accent)",
-                            }}>{detailETF.asset_class}</span>
-                            {detailETF.esg && <span style={{
-                              fontSize: 10, fontWeight: 600, padding: "2px 9px", borderRadius: 10,
-                              background: "var(--green-bg)", color: "var(--green)",
-                            }}>ESG</span>}
-                          </div>
-                          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>{detailETF.name}</p>
-                          <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 3 }}>
-                            {detailETF.provider} · {detailETF.sector} · {detailETF.industry} · {detailETF.geo}
-                          </p>
-                        </div>
-                        <button onClick={() => setDetailETF(null)} style={{
-                          background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 6,
-                          padding: "4px 12px", cursor: "pointer", fontSize: 11, color: "var(--text-muted)",
-                          fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
-                        }}>Overview</button>
-                      </div>
-
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 12 }}>
-                        {[
-                          { label: "Expense Ratio", value: detailETF.expense.toFixed(2) + "%" },
-                          { label: "AUM", value: fmtAum(detailETF.aum) },
-                          { label: "Div. Yield", value: detailETF.div_yield.toFixed(1) + "%" },
-                          { label: "Risk Level", value: detailETF.risk },
-                        ].map(({ label, value }) => (
-                          <div key={label} style={{
-                            background: "var(--bg)", borderRadius: 8, padding: "8px 10px",
-                            border: "1px solid var(--border)",
-                          }}>
-                            <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 2, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>{label}</div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>Performance</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(9, 1fr)", gap: 5, marginBottom: 10 }}>
-                        {PERF_RANGES.map(r => {
-                          const v = detailETF.perf[r];
-                          return (
-                            <div key={r} style={{
-                              background: v >= 0 ? "var(--green-bg)" : "var(--red-bg)",
-                              borderRadius: 7, padding: "6px 4px", textAlign: "center",
-                            }}>
-                              <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 2 }}>{r}</div>
-                              <div style={{
-                                fontSize: 11, fontWeight: 700,
-                                fontFamily: "'JetBrains Mono', monospace",
-                                color: v >= 0 ? "var(--green)" : "var(--red)",
-                              }}>{fmt(v)}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                        {detailETF.tags.map(t => (
-                          <span key={t} style={{
-                            fontSize: 10, color: "var(--text-muted)", background: "var(--bg)",
-                            border: "1px solid var(--border)", padding: "2px 8px", borderRadius: 10,
-                          }}>#{t}</span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : packageStats ? (
-                    /* ── Package Overview ── */
-                    <div style={{ padding: 16 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", marginBottom: 10 }}>
-                        Package summary — {etfPackage.length} ETF{etfPackage.length !== 1 ? "s" : ""}
-                      </div>
-
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 12 }}>
-                        {[
-                          { label: "Avg Expense", value: packageStats.avgExpense.toFixed(2) + "%" },
-                          { label: "Combined AUM", value: fmtAum(packageStats.totalAum) },
-                          { label: "Avg Div. Yield", value: packageStats.avgDivYield.toFixed(1) + "%" },
-                          { label: "Sectors", value: packageStats.sectors.length },
-                        ].map(({ label, value }) => (
-                          <div key={label} style={{
-                            background: "var(--bg)", borderRadius: 8, padding: "8px 10px",
-                            border: "1px solid var(--border)",
-                          }}>
-                            <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 2, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>{label}</div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>Average performance</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(9, 1fr)", gap: 5, marginBottom: 12 }}>
-                        {PERF_RANGES.map(r => {
-                          const v = packageStats.avgPerf[r];
-                          return (
-                            <div key={r} style={{
-                              background: v >= 0 ? "var(--green-bg)" : "var(--red-bg)",
-                              borderRadius: 7, padding: "6px 4px", textAlign: "center",
-                            }}>
-                              <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 2 }}>{r}</div>
-                              <div style={{
-                                fontSize: 11, fontWeight: 700,
-                                fontFamily: "'JetBrains Mono', monospace",
-                                color: v >= 0 ? "var(--green)" : "var(--red)",
-                              }}>{fmt(v)}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>Fund comparison</div>
-                      <div style={{ overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                          <thead>
-                            <tr style={{ borderBottom: "2px solid var(--border)" }}>
-                              <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase" }}>Fund</th>
-                              <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase" }}>Expense</th>
-                              <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase" }}>Yield</th>
-                              <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase" }}>YTD</th>
-                              <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase" }}>1Y</th>
-                              <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase" }}>3Y</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {etfPackage.map(etf => (
-                              <tr key={etf.ticker} className="etf-row"
-                                style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
-                                onClick={() => setDetailETF(etf)}>
-                                <td style={{ padding: "7px 8px" }}>
-                                  <span style={{ fontWeight: 700, color: "var(--accent)", fontFamily: "'JetBrains Mono', monospace" }}>{etf.ticker}</span>
-                                </td>
-                                <td style={{ padding: "7px 8px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace", color: "var(--text-secondary)" }}>
-                                  {etf.expense.toFixed(2)}%
-                                </td>
-                                <td style={{ padding: "7px 8px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace", color: "var(--text-secondary)" }}>
-                                  {etf.div_yield.toFixed(1)}%
-                                </td>
-                                <td style={{
-                                  padding: "7px 8px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace",
-                                  fontWeight: 600, color: etf.perf["YTD"] >= 0 ? "var(--green)" : "var(--red)",
-                                }}>{fmt(etf.perf["YTD"])}</td>
-                                <td style={{
-                                  padding: "7px 8px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace",
-                                  fontWeight: 600, color: etf.perf["1Y"] >= 0 ? "var(--green)" : "var(--red)",
-                                }}>{fmt(etf.perf["1Y"])}</td>
-                                <td style={{
-                                  padding: "7px 8px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace",
-                                  fontWeight: 600, color: etf.perf["3Y"] >= 0 ? "var(--green)" : "var(--red)",
-                                }}>{fmt(etf.perf["3Y"])}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 5 }}>
-                        {packageStats.sectors.map(s => {
-                          const count = etfPackage.filter(e => e.sector === s).length;
-                          return (
-                            <span key={s} style={{
-                              fontSize: 10, padding: "3px 10px", borderRadius: 10,
-                              background: "var(--accent-light)", color: "var(--accent)", fontWeight: 600,
-                            }}>{s} ({count})</span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null}
+              {etfPackage.length === 0 && !detailETF ? (
+                <div style={{ padding: "28px 16px", textAlign: "center" }}>
+                  <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
+                    Add ETFs to your package to see details and aggregate performance.
+                  </p>
                 </div>
-              )}
+              ) : detailETF ? (
+                /* ── Individual ETF Detail View ── */
+                <div style={{ padding: 20, animation: "slideUp 0.15s ease" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                        <span style={{ fontSize: 20, fontWeight: 800, color: "var(--accent)", fontFamily: "'JetBrains Mono', monospace" }}>
+                          {detailETF.ticker}
+                        </span>
+                        <span style={{
+                          fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 10,
+                          background: "var(--accent-light)", color: "var(--accent)",
+                        }}>{detailETF.asset_class}</span>
+                        {detailETF.esg && <span style={{
+                          fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 10,
+                          background: "var(--green-bg)", color: "var(--green)",
+                        }}>ESG</span>}
+                      </div>
+                      <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", fontFamily: "'DM Sans', sans-serif", margin: 0 }}>
+                        {detailETF.name}
+                      </h3>
+                      <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                        {detailETF.provider} · {detailETF.sector} · {detailETF.industry} · {detailETF.geo}
+                      </p>
+                    </div>
+                    <button onClick={() => setDetailETF(null)} style={{
+                      background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 6,
+                      padding: "4px 12px", cursor: "pointer", fontSize: 11, color: "var(--text-muted)",
+                      fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
+                    }}>Back to overview</button>
+                  </div>
+
+                  {/* Key Metrics */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+                    {[
+                      { label: "Expense Ratio", value: detailETF.expense.toFixed(2) + "%" },
+                      { label: "AUM", value: fmtAum(detailETF.aum) },
+                      { label: "Div. Yield", value: detailETF.div_yield.toFixed(1) + "%" },
+                      { label: "Risk Level", value: detailETF.risk },
+                    ].map(({ label, value }) => (
+                      <div key={label} style={{
+                        background: "var(--bg)", borderRadius: 8, padding: "10px 12px",
+                        border: "1px solid var(--border)",
+                      }}>
+                        <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 3, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>{label}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Performance Grid */}
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>Performance</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(9, 1fr)", gap: 6, marginBottom: 16 }}>
+                    {PERF_RANGES.map(r => {
+                      const v = detailETF.perf[r];
+                      return (
+                        <div key={r} style={{
+                          background: v >= 0 ? "var(--green-bg)" : "var(--red-bg)",
+                          borderRadius: 8, padding: "8px 6px", textAlign: "center",
+                        }}>
+                          <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 3 }}>{r}</div>
+                          <div style={{
+                            fontSize: 12, fontWeight: 700,
+                            fontFamily: "'JetBrains Mono', monospace",
+                            color: v >= 0 ? "var(--green)" : "var(--red)",
+                          }}>{fmt(v)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Tags */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {detailETF.tags.map(t => (
+                      <span key={t} style={{
+                        fontSize: 10, color: "var(--text-muted)", background: "var(--bg)",
+                        border: "1px solid var(--border)", padding: "2px 9px", borderRadius: 10,
+                      }}>#{t}</span>
+                    ))}
+                  </div>
+                </div>
+              ) : packageStats ? (
+                /* ── Package Overview ── */
+                <div style={{ padding: 20, animation: "slideUp 0.15s ease" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", marginBottom: 10 }}>
+                    Package summary — {etfPackage.length} ETF{etfPackage.length !== 1 ? "s" : ""}
+                  </div>
+
+                  {/* Aggregate Metrics */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+                    {[
+                      { label: "Avg Expense", value: packageStats.avgExpense.toFixed(2) + "%" },
+                      { label: "Combined AUM", value: fmtAum(packageStats.totalAum) },
+                      { label: "Avg Div. Yield", value: packageStats.avgDivYield.toFixed(1) + "%" },
+                      { label: "Sectors", value: packageStats.sectors.length },
+                    ].map(({ label, value }) => (
+                      <div key={label} style={{
+                        background: "var(--bg)", borderRadius: 8, padding: "10px 12px",
+                        border: "1px solid var(--border)",
+                      }}>
+                        <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 3, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>{label}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Average Performance */}
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>Average performance</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(9, 1fr)", gap: 6, marginBottom: 16 }}>
+                    {PERF_RANGES.map(r => {
+                      const v = packageStats.avgPerf[r];
+                      return (
+                        <div key={r} style={{
+                          background: v >= 0 ? "var(--green-bg)" : "var(--red-bg)",
+                          borderRadius: 8, padding: "8px 6px", textAlign: "center",
+                        }}>
+                          <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 3 }}>{r}</div>
+                          <div style={{
+                            fontSize: 12, fontWeight: 700,
+                            fontFamily: "'JetBrains Mono', monospace",
+                            color: v >= 0 ? "var(--green)" : "var(--red)",
+                          }}>{fmt(v)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Comparison Table */}
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>Fund comparison</div>
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid var(--border)" }}>
+                          <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>Fund</th>
+                          <th style={{ padding: "8px 10px", textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>Expense</th>
+                          <th style={{ padding: "8px 10px", textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>Yield</th>
+                          <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>Risk</th>
+                          <th style={{ padding: "8px 10px", textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>YTD</th>
+                          <th style={{ padding: "8px 10px", textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>1Y</th>
+                          <th style={{ padding: "8px 10px", textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>3Y</th>
+                          <th style={{ padding: "8px 4px", width: 40 }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {etfPackage.map(etf => (
+                          <tr key={etf.ticker} className="etf-row"
+                            style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                            onClick={() => setDetailETF(etf)}>
+                            <td style={{ padding: "9px 10px" }}>
+                              <span style={{ fontWeight: 700, color: "var(--accent)", fontFamily: "'JetBrains Mono', monospace" }}>{etf.ticker}</span>
+                              <span style={{ color: "var(--text-muted)", marginLeft: 8 }}>{etf.sector}</span>
+                            </td>
+                            <td style={{ padding: "9px 10px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace", color: "var(--text-secondary)" }}>
+                              {etf.expense.toFixed(2)}%
+                            </td>
+                            <td style={{ padding: "9px 10px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace", color: "var(--text-secondary)" }}>
+                              {etf.div_yield.toFixed(1)}%
+                            </td>
+                            <td style={{ padding: "9px 10px" }}>
+                              <span style={{
+                                fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 10,
+                                background: etf.risk === "Conservative" ? "var(--green-bg)" :
+                                           etf.risk === "Aggressive" ? "var(--red-bg)" :
+                                           etf.risk === "Moderate" ? "var(--accent-light)" : "var(--amber-bg)",
+                                color: etf.risk === "Conservative" ? "var(--green)" :
+                                       etf.risk === "Aggressive" ? "var(--red)" :
+                                       etf.risk === "Moderate" ? "var(--accent)" : "var(--amber)",
+                              }}>{etf.risk.replace("Moderately ", "M.")}</span>
+                            </td>
+                            <td style={{
+                              padding: "9px 10px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace",
+                              fontWeight: 600, color: etf.perf["YTD"] >= 0 ? "var(--green)" : "var(--red)",
+                            }}>{fmt(etf.perf["YTD"])}</td>
+                            <td style={{
+                              padding: "9px 10px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace",
+                              fontWeight: 600, color: etf.perf["1Y"] >= 0 ? "var(--green)" : "var(--red)",
+                            }}>{fmt(etf.perf["1Y"])}</td>
+                            <td style={{
+                              padding: "9px 10px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace",
+                              fontWeight: 600, color: etf.perf["3Y"] >= 0 ? "var(--green)" : "var(--red)",
+                            }}>{fmt(etf.perf["3Y"])}</td>
+                            <td style={{ padding: "9px 4px", textAlign: "center" }}>
+                              <span style={{ fontSize: 11, color: "var(--accent)", fontWeight: 500 }}>→</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Sector distribution */}
+                  <div style={{ marginTop: 16, fontSize: 12, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>Sector exposure</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {packageStats.sectors.map(s => {
+                      const count = etfPackage.filter(e => e.sector === s).length;
+                      return (
+                        <span key={s} style={{
+                          fontSize: 11, padding: "4px 12px", borderRadius: 12,
+                          background: "var(--accent-light)", color: "var(--accent)", fontWeight: 600,
+                        }}>{s} ({count})</span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </main>
         </div>
