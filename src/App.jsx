@@ -173,129 +173,18 @@ const fmtAum = (n) => {
   return "$" + n + "M";
 };
 
-// ─── Performance Preset Options ───
-const PERF_PRESETS = [
-  { key: "any", label: "Any performance", min: -Infinity, max: Infinity },
-  { key: "positive", label: "Positive (> 0%)", min: 0.01, max: Infinity },
-  { key: "negative", label: "Negative (< 0%)", min: -Infinity, max: -0.01 },
-  { key: "up_0_10", label: "Up 0% – 10%", min: 0, max: 10 },
-  { key: "up_10_25", label: "Up 10% – 25%", min: 10, max: 25 },
-  { key: "up_25_50", label: "Up 25% – 50%", min: 25, max: 50 },
-  { key: "up_50", label: "Up 50%+", min: 50, max: Infinity },
-  { key: "down_0_10", label: "Down 0% – 10%", min: -10, max: 0 },
-  { key: "down_10_25", label: "Down 10% – 25%", min: -25, max: -10 },
+// ─── Performance Range Options (for chip-based selection) ───
+const PERF_RANGE_OPTIONS = [
+  { key: "positive", label: "Positive", min: 0.01, max: Infinity },
+  { key: "negative", label: "Negative", min: -Infinity, max: -0.01 },
+  { key: "up_0_10", label: "0–10%", min: 0, max: 10 },
+  { key: "up_10_25", label: "10–25%", min: 10, max: 25 },
+  { key: "up_25_50", label: "25–50%", min: 25, max: 50 },
+  { key: "up_50", label: "50%+", min: 50, max: Infinity },
+  { key: "down_0_10", label: "Down 0–10%", min: -10, max: 0 },
+  { key: "down_10_25", label: "Down 10–25%", min: -25, max: -10 },
   { key: "down_25", label: "Down 25%+", min: -Infinity, max: -25 },
-  { key: "custom", label: "Custom range...", min: null, max: null },
 ];
-
-function PerfDropdown({ label, value, onChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [customMin, setCustomMin] = useState("");
-  const [customMax, setCustomMax] = useState("");
-  const ref = useRef(null);
-  const isCustom = value.key === "custom";
-
-  useEffect(() => {
-    const handleClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const handleSelect = (preset) => {
-    if (preset.key === "custom") {
-      onChange({ key: "custom", min: customMin === "" ? -Infinity : +customMin, max: customMax === "" ? Infinity : +customMax });
-    } else {
-      onChange(preset);
-    }
-    if (preset.key !== "custom") setIsOpen(false);
-  };
-
-  const handleCustomApply = () => {
-    onChange({ key: "custom", min: customMin === "" ? -Infinity : +customMin, max: customMax === "" ? Infinity : +customMax });
-    setIsOpen(false);
-  };
-
-  const displayLabel = isCustom
-    ? `Custom: ${customMin === "" ? "any" : customMin + "%"} to ${customMax === "" ? "any" : customMax + "%"}`
-    : value.label;
-
-  const isActive = value.key !== "any";
-
-  return (
-    <div ref={ref} style={{ marginBottom: 10, position: "relative" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", width: 32, fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
-        <button onClick={() => setIsOpen(!isOpen)} style={{
-          flex: 1, display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
-          border: isActive ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
-          background: isActive ? "var(--accent-light)" : "var(--surface)",
-          color: isActive ? "var(--accent)" : "var(--text-secondary)",
-          cursor: "pointer", fontFamily: "'DM Sans', sans-serif", textAlign: "left",
-          transition: "all 0.15s ease",
-        }}>
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayLabel}</span>
-          <span style={{ fontSize: 10, marginLeft: 8, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s ease", flexShrink: 0 }}>▾</span>
-        </button>
-        {isActive && (
-          <button onClick={(e) => { e.stopPropagation(); onChange(PERF_PRESETS[0]); setCustomMin(""); setCustomMax(""); }}
-            style={{
-              background: "none", border: "none", cursor: "pointer", fontSize: 14,
-              color: "var(--text-muted)", padding: "2px 4px", lineHeight: 1, flexShrink: 0,
-            }}>×</button>
-        )}
-      </div>
-
-      {isOpen && (
-        <div style={{
-          position: "absolute", left: 40, right: 0, top: "100%", zIndex: 50,
-          background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: 10,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.1)", overflow: "hidden",
-          animation: "fadeIn 0.12s ease",
-        }}>
-          {PERF_PRESETS.filter(p => p.key !== "custom").map(preset => (
-            <button key={preset.key} onClick={() => handleSelect(preset)} style={{
-              width: "100%", padding: "9px 14px", border: "none", background: value.key === preset.key ? "var(--accent-light)" : "transparent",
-              color: value.key === preset.key ? "var(--accent)" : "var(--text-secondary)",
-              fontSize: 12, fontWeight: value.key === preset.key ? 600 : 400, textAlign: "left",
-              cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-              borderBottom: "1px solid var(--border)",
-            }}
-              onMouseEnter={e => { if (value.key !== preset.key) e.target.style.background = "var(--surface-hover)"; }}
-              onMouseLeave={e => { if (value.key !== preset.key) e.target.style.background = "transparent"; }}
-            >{preset.label}</button>
-          ))}
-          {/* Custom range section */}
-          <div style={{ padding: "10px 14px", borderTop: "1px solid var(--border)", background: "var(--bg)" }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", marginBottom: 8 }}>Custom range</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <input type="number" placeholder="Min %" value={customMin}
-                onChange={e => setCustomMin(e.target.value)}
-                style={{
-                  flex: 1, padding: "6px 8px", borderRadius: 6, border: "1.5px solid var(--border)",
-                  fontSize: 12, fontFamily: "'JetBrains Mono', monospace", outline: "none",
-                  background: "var(--surface)", color: "var(--text-primary)", width: "100%",
-                }} />
-              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>to</span>
-              <input type="number" placeholder="Max %" value={customMax}
-                onChange={e => setCustomMax(e.target.value)}
-                style={{
-                  flex: 1, padding: "6px 8px", borderRadius: 6, border: "1.5px solid var(--border)",
-                  fontSize: 12, fontFamily: "'JetBrains Mono', monospace", outline: "none",
-                  background: "var(--surface)", color: "var(--text-primary)", width: "100%",
-                }} />
-              <button onClick={handleCustomApply} style={{
-                padding: "6px 12px", borderRadius: 6, border: "none",
-                background: "var(--accent)", color: "#fff", fontSize: 11, fontWeight: 600,
-                cursor: "pointer", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap",
-              }}>Apply</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function SingleChipSelect({ options, value, onChange, disabledOptions }) {
   return (
@@ -431,9 +320,7 @@ export default function ETFFinderApp() {
   const [riskCats, setRiskCats] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [matchedInterests, setMatchedInterests] = useState([]);
-  const [perfFilters, setPerfFilters] = useState(
-    Object.fromEntries(PERF_RANGES.map(r => [r, PERF_PRESETS[0]]))
-  );
+  const [perfFilters, setPerfFilters] = useState({});
   // Phase 2 filters
   const [assetClasses, setAssetClasses] = useState([]);
   const [geoFocus, setGeoFocus] = useState([]);
@@ -521,14 +408,13 @@ export default function ETFFinderApp() {
         if (divYieldFilter === "5p" && d < 5) return false;
       }
       // Performance ranges
-      for (const range of PERF_RANGES) {
-        const pf = perfFilters[range];
-        if (pf.key === "any") continue;
+      for (const [range, rangeKey] of Object.entries(perfFilters)) {
+        if (!rangeKey) continue;
+        const opt = PERF_RANGE_OPTIONS.find(o => o.key === rangeKey);
+        if (!opt) continue;
         const val = etf.perf[range];
-        if (pf.min !== null && pf.min !== -Infinity && val < pf.min) return false;
-        if (pf.max !== null && pf.max !== Infinity && val > pf.max) return false;
-        if (pf.key === "positive" && val <= 0) return false;
-        if (pf.key === "negative" && val >= 0) return false;
+        if (opt.min !== -Infinity && val < opt.min) return false;
+        if (opt.max !== Infinity && val > opt.max) return false;
       }
       if (matchedInterests.length > 0) {
         const allTags = matchedInterests.flatMap(m => m.tags);
@@ -579,14 +465,13 @@ export default function ETFFinderApp() {
         if (divYieldFilter === "3_5" && (d < 3 || d >= 5)) return false;
         if (divYieldFilter === "5p" && d < 5) return false;
       }
-      for (const range of PERF_RANGES) {
-        const pf = perfFilters[range];
-        if (pf.key === "any") continue;
+      for (const [range, rangeKey] of Object.entries(perfFilters)) {
+        if (!rangeKey) continue;
+        const opt = PERF_RANGE_OPTIONS.find(o => o.key === rangeKey);
+        if (!opt) continue;
         const val = etf.perf[range];
-        if (pf.min !== null && pf.min !== -Infinity && val < pf.min) return false;
-        if (pf.max !== null && pf.max !== Infinity && val > pf.max) return false;
-        if (pf.key === "positive" && val <= 0) return false;
-        if (pf.key === "negative" && val >= 0) return false;
+        if (opt.min !== -Infinity && val < opt.min) return false;
+        if (opt.max !== Infinity && val > opt.max) return false;
       }
       if (matchedInterests.length > 0) {
         const allTags = matchedInterests.flatMap(m => m.tags);
@@ -687,7 +572,7 @@ export default function ETFFinderApp() {
   const clearAll = () => {
     setSectors([]); setIndustries([]); setRiskCats([]);
     setSearchText(""); setMatchedInterests([]);
-    setPerfFilters(Object.fromEntries(PERF_RANGES.map(r => [r, PERF_PRESETS[0]])));
+    setPerfFilters({});
     setAssetClasses([]); setGeoFocus([]); setProviders([]);
     setEsgOnly(false); setExpenseFilter("any"); setAumFilter("any"); setDivYieldFilter("any");
     setStyleBoxSelection([]);
@@ -903,11 +788,75 @@ export default function ETFFinderApp() {
 
               {/* Performance */}
               <FilterSection title="Performance Ranges" defaultOpen={false}>
-                {PERF_RANGES.map(range => (
-                  <PerfDropdown key={range} label={range}
-                    value={perfFilters[range]}
-                    onChange={v => { setPerfFilters(prev => ({ ...prev, [range]: v })); setPage(0); }} />
+                {/* Step 1: Time period chips */}
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>Select time periods to filter:</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                  {PERF_RANGES.map(range => {
+                    const isActive = perfFilters[range] !== undefined;
+                    return (
+                      <button key={range} onClick={() => {
+                        setPerfFilters(prev => {
+                          const next = { ...prev };
+                          if (next[range] !== undefined) { delete next[range]; } else { next[range] = null; }
+                          return next;
+                        });
+                        setPage(0);
+                      }}
+                        style={{
+                          padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+                          border: isActive ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
+                          background: isActive ? "var(--accent-light)" : "var(--surface)",
+                          color: isActive ? "var(--accent)" : "var(--text-muted)",
+                          cursor: "pointer", transition: "all 0.15s ease",
+                          fontFamily: "'JetBrains Mono', monospace",
+                        }}>
+                        {range}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Step 2: For each active period, show range chips */}
+                {PERF_RANGES.filter(r => perfFilters[r] !== undefined).map(range => (
+                  <div key={range} style={{
+                    marginBottom: 10, padding: "8px 10px", borderRadius: 8,
+                    background: "var(--bg)", border: "1px solid var(--border)",
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", marginBottom: 6, fontFamily: "'JetBrains Mono', monospace" }}>
+                      {range} {perfFilters[range] ? "· " + PERF_RANGE_OPTIONS.find(o => o.key === perfFilters[range])?.label : "· select range"}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {PERF_RANGE_OPTIONS.map(opt => {
+                        const active = perfFilters[range] === opt.key;
+                        return (
+                          <button key={opt.key} onClick={() => {
+                            setPerfFilters(prev => ({
+                              ...prev,
+                              [range]: active ? null : opt.key,
+                            }));
+                            setPage(0);
+                          }}
+                            style={{
+                              padding: "3px 10px", borderRadius: 14, fontSize: 11, fontWeight: 500,
+                              border: active ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
+                              background: active ? "var(--accent-light)" : "var(--surface)",
+                              color: active ? "var(--accent)" : "var(--text-muted)",
+                              cursor: "pointer", transition: "all 0.15s ease",
+                              fontFamily: "'DM Sans', sans-serif",
+                            }}>
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ))}
+                {Object.keys(perfFilters).length > 0 && (
+                  <button onClick={() => { setPerfFilters({}); setPage(0); }} style={{
+                    background: "none", border: "none", color: "var(--accent)", fontSize: 11,
+                    fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                  }}>Clear all performance filters</button>
+                )}
               </FilterSection>
 
               {/* ── Phase 2 Filters ── */}
