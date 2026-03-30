@@ -385,7 +385,7 @@ export default function ETFFinderApp() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://briancronin.ai/etf-finder/',
+        redirectTo: window.location.origin + '/etf-finder/',
       },
     });
     if (error) {
@@ -774,6 +774,14 @@ export default function ETFFinderApp() {
           position: "sticky", top: 0, zIndex: 100, flexShrink: 0,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 14 }}>
+            <a href="/" style={{
+              fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 500,
+              fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 4,
+              marginRight: isMobile ? 0 : 4, flexShrink: 0,
+            }}
+              onMouseEnter={e => e.target.style.color = "var(--accent)"}
+              onMouseLeave={e => e.target.style.color = "var(--text-muted)"}
+            >← {!isMobile && "briancronin.ai"}</a>
             <div style={{
               width: isMobile ? 32 : 38, height: isMobile ? 32 : 38, borderRadius: 10, background: "linear-gradient(135deg, var(--accent), #818CF8)",
               display: "flex", alignItems: "center", justifyContent: "center",
